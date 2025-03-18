@@ -39,7 +39,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       />
 
       {!isOpen && (
-        <div className="flex flex-col h-full items-center">
+        <div className="flex flex-col h-full items-center justify-center">
           {/* NavigationLinks */}
           <nav className={className}>
             <ul>
@@ -64,7 +64,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
           </nav>
 
           {/* BottomLinks*/}
-          <div className="mt-auto">
+          <div className="">
             {/* Divider */}
             <div className="my-4 w-full border-t border-dsp-orange" />
             <nav className={className}>

@@ -1,6 +1,10 @@
 import "./App.css";
 // Pages
 import Dashboard from "./pages/dashboard";
+import Modules from "./pages/modules";
+import Tasks from "./pages/tasks";
+import IntermediateExamination from "./pages/intermediate_examination";
+import FinalExam from "./pages/final_exam";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ReactNode } from "react";
@@ -29,12 +33,16 @@ const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
 ];
 
 const middleLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
-  { title: "Deine Statistik", to: "/user-stats", icon: <TfiStatsUp size={24} /> },
+  {
+    title: "Deine Statistik",
+    to: "/user-stats",
+    icon: <TfiStatsUp size={24} />,
+  },
 ];
 
 const bottomLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Einstellungen", to: "/settings", icon: <CiSettings size={24} /> },
-  { title: "Ausloggen", to: "/dashboard", icon: <CiLogout size={24} /> },
+  { title: "Ausloggen", to: "/login", icon: <CiLogout size={24} /> },
 ];
 
 function App() {
@@ -57,6 +65,10 @@ function App() {
           {/* Content*/}
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/modules" element={<Modules />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/intermediate-examination" element={<IntermediateExamination />} />
+            <Route path="/final-exam" element={<FinalExam />} />
             {/* Weitere Routen */}
           </Routes>
         </div>
