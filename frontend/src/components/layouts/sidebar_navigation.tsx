@@ -10,12 +10,14 @@ import { IoMdArrowDropleft } from "react-icons/io";
 
 type SidebarNavigationProps = {
   links: { to: string; title: string; icon?: ReactNode }[];
+  middleLinks: { to: string; title: string; icon?: ReactNode }[];
   bottomLinks: { to: string; title: string; icon?: ReactNode }[];
   className?: string;
 };
 
 const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   links,
+  middleLinks,
   bottomLinks,
   className = "",
 }) => {
@@ -47,9 +49,24 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                 </li>
               ))}
             </ul>
+            {/* Divider */}
+            <div className="my-4 w-full border-t border-dsp-orange" />
+            <nav className={className}>
+              {/* MiddleLinks */}
+              <ul>
+                {middleLinks.map((link, index) => (
+                  <li key={index}>
+                    <LinkSidebar to={link.to} icon={link.icon}></LinkSidebar>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </nav>
+
           {/* BottomLinks*/}
-          <div className="mt-auto ">
+          <div className="mt-auto">
+            {/* Divider */}
+            <div className="my-4 w-full border-t border-dsp-orange" />
             <nav className={className}>
               <ul>
                 {bottomLinks.map((bottomLink, index) => (
@@ -66,7 +83,7 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
         </div>
       )}
       {isOpen && (
-        <div className="flex flex-col h-full items-center">
+        <div className="flex flex-col h-full items-center gap-10">
           <img src={LogoDSP} alt="LogoDSP" className="mb-4" />
           {/* NavigationLinks */}
           <nav className={className}>
@@ -79,9 +96,24 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
                 </li>
               ))}
             </ul>
+            {/* Divider */}
+            <div className="my-4 w-full border-t border-dsp-orange" />
+            {/* MiddleLinks */}
+            <ul>
+              {middleLinks.map((link, index) => (
+                <li key={index}>
+                  <LinkSidebar to={link.to} icon={link.icon}>
+                    {link.title}
+                  </LinkSidebar>
+                </li>
+              ))}
+            </ul>
           </nav>
           {/* BottomLinks*/}
-          <div className="mt-auto w-full">
+
+          <div className="mt-auto">
+            {/* Divider */}
+            <div className="my-4 w-full border-t border-dsp-orange" />
             <nav className={className}>
               <ul>
                 {bottomLinks.map((bottomLink, index) => (

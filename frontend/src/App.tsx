@@ -13,6 +13,8 @@ import { PiNotebookThin } from "react-icons/pi";
 import { PiFlagThin } from "react-icons/pi";
 import { CiMedal } from "react-icons/ci";
 import { CiSettings } from "react-icons/ci";
+import { TfiStatsUp } from "react-icons/tfi";
+import { CiLogout } from "react-icons/ci";
 
 const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Dashboard", to: "/dashboard", icon: <CiHome size={24} /> },
@@ -26,8 +28,13 @@ const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Abschlussprüfung", to: "/final-exam", icon: <CiMedal size={24} /> },
 ];
 
+const middleLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
+  { title: "Deine Statistik", to: "/user-stats", icon: <TfiStatsUp size={24} /> },
+];
+
 const bottomLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Einstellungen", to: "/settings", icon: <CiSettings size={24} /> },
+  { title: "Ausloggen", to: "/dashboard", icon: <CiLogout size={24} /> },
 ];
 
 function App() {
@@ -37,13 +44,14 @@ function App() {
         <div className="flex">
           <SidebarNavigation
             links={navigationObj}
+            middleLinks={middleLinksObj}
             bottomLinks={bottomLinksObj}
           />
         </div>
         <div className="flex-grow overflow-auto pt-5 px-20">
           <div className="flex items-center justify-center">
             <div className="flex border-1 rounded-full w-200 items-center justify-center">
-              Header Section
+              Global Searchfield
             </div>
           </div>
           {/* Content*/}
