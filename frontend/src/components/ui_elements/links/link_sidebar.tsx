@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 type SidebarLinkProps = {
   to: string;
   icon?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, children }) => {

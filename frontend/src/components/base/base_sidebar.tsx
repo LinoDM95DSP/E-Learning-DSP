@@ -1,18 +1,27 @@
 import { ReactNode } from "react";
+import { motion } from "framer-motion";
 
 type SidebarBaseProps = {
   children: ReactNode;
   className?: string;
+  isOpen?: boolean;
 };
+
+
 
 const SidebarBase: React.FC<SidebarBaseProps> = ({
   children,
+  isOpen,
   className = "",
 }) => {
   return (
-    <div className={`bg-dsp-orange_light p-10 h-screen ${className}`}>
+    <motion.div
+      className={`px-10 py-2 bg-dsp-orange_light h-screen ${className}`}
+      animate={{ width: isOpen ? "300px" : "110px" }}
+      transition={{ duration: 0.3 }}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 };
 

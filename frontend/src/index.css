@@ -20,3 +20,21 @@ h6 {
   --color-dsp-orange: #ff863d;
   --color-dsp-orange_light: #ffe7d4;
 }
+
+/* Chrome, Safari und Edge */
+::-webkit-scrollbar {
+  width: 4px; 
+  height: 8px; /* Höhe der horizontalen Scrollbar */
+}
+
+::-webkit-scrollbar-track {
+  background: #ffe7d4; /* Hintergrund der Scrollbar-Spur */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff863d; /* Farbe des Daumens */
+  border-radius: 4px;
+}
+
+
+
