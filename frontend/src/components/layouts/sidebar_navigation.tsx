@@ -10,11 +10,13 @@ import { IoMdArrowDropleft } from "react-icons/io";
 
 type SidebarNavigationProps = {
   links: { to: string; title: string; icon?: ReactNode }[];
+  bottomLinks: { to: string; title: string; icon?: ReactNode }[];
   className?: string;
 };
 
 const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
   links,
+  bottomLinks,
   className = "",
 }) => {
   //TODO: add open close logic
@@ -35,42 +37,62 @@ const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       />
 
       {!isOpen && (
-        <div className="flex flex-col gap-10 mt-5">
-          <div className="flex flex-col items-center settings-section">
+        <div className="flex flex-col h-full items-center">
+          {/* NavigationLinks */}
+          <nav className={className}>
+            <ul>
+              {links.map((link, index) => (
+                <li key={index}>
+                  <LinkSidebar to={link.to} icon={link.icon}></LinkSidebar>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {/* BottomLinks*/}
+          <div className="mt-auto ">
             <nav className={className}>
               <ul>
-                {links.map((link, index) => (
+                {bottomLinks.map((bottomLink, index) => (
                   <li key={index}>
-                    <LinkSidebar to={link.to} icon={link.icon}></LinkSidebar>
+                    <LinkSidebar
+                      to={bottomLink.to}
+                      icon={bottomLink.icon}
+                    ></LinkSidebar>
                   </li>
                 ))}
               </ul>
             </nav>
-            <div>
-              <p>Settings</p>
-            </div>
           </div>
         </div>
       )}
-
       {isOpen && (
-        <div className="flex flex-col gap-10 items-center justify-center">
-          <img src={LogoDSP} alt="LogoDSP" />
-          <div className="flex flex-col items-center settings-section">
+        <div className="flex flex-col h-full items-center">
+          <img src={LogoDSP} alt="LogoDSP" className="mb-4" />
+          {/* NavigationLinks */}
+          <nav className={className}>
+            <ul>
+              {links.map((link, index) => (
+                <li key={index}>
+                  <LinkSidebar to={link.to} icon={link.icon}>
+                    {link.title}
+                  </LinkSidebar>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {/* BottomLinks*/}
+          <div className="mt-auto w-full">
             <nav className={className}>
               <ul>
-                {links.map((link, index) => (
+                {bottomLinks.map((bottomLink, index) => (
                   <li key={index}>
-                    <LinkSidebar to={link.to} icon={link.icon}>
-                      {link.title}
+                    <LinkSidebar to={bottomLink.to} icon={bottomLink.icon}>
+                      {bottomLink.title}
                     </LinkSidebar>
                   </li>
                 ))}
               </ul>
             </nav>
-            <div>
-              <p>Settings</p>
-            </div>
           </div>
         </div>
       )}

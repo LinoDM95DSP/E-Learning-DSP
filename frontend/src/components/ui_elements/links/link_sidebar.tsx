@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 type SidebarLinkProps = {
   to: string;
@@ -10,19 +10,19 @@ type SidebarLinkProps = {
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, children }) => {
   return (
     <li className="mb-2">
-      <Link
+      <NavLink
         to={to}
-        className="flex items-center p-2 text-base font-normal rounded-lg hover:font-bold hover:text-dsp-orange"
+        className={({ isActive }) =>
+          `flex items-center p-2 text-base rounded-lg hover:text-dsp-orange ${
+            isActive ? "text-dsp-orange font-bold" : ""
+          }`
+        }
       >
         {icon && (
-          <span className="mr-2 hover:text-dsp-orange transition-colors duration-200">
-            {icon}
-          </span>
+          <span className="mr-2 transition-colors duration-200">{icon}</span>
         )}
-        <p className="hover:text-dsp-orange transition-colors duration-200">
-          {children}
-        </p>
-      </Link>
+        <span className="transition-colors duration-200">{children}</span>
+      </NavLink>
     </li>
   );
 };
