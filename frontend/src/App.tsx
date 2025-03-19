@@ -2,6 +2,7 @@ import "./App.css";
 // Pages
 import Dashboard from "./pages/dashboard";
 import Modules from "./pages/modules";
+import ModuleDetail from "./pages/module_detail";
 import Tasks from "./pages/tasks";
 import IntermediateExamination from "./pages/intermediate_examination";
 import FinalExam from "./pages/final_exam";
@@ -65,6 +66,7 @@ function App() {
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/modules" element={<Modules />} />
+            <Route path="/modules/:moduleId" element={<ModuleDetail />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/intermediate-examination" element={<IntermediateExamination />} />
             <Route path="/final-exam" element={<FinalExam />} />

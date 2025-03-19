@@ -1,8 +1,7 @@
-
 // ModuleDetail.js
-import { useParams } from 'react-router-dom';
-import modulesObj from '../../util/modules/modules_object';
-import LearningContentVideoLayout from './learning_content_video';
+import { useParams } from "react-router-dom";
+import modulesObj from "../util/modules/modules_object";
+import LearningContentVideoLayout from "../components/layouts/learning_content_video";
 
 function ModuleDetail() {
   const { moduleId } = useParams();

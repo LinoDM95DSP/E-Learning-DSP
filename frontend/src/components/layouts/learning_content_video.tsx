@@ -16,12 +16,12 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
 }) => {
   return (
     <div className="flex flex-col gap-10 justify-center items-center">
-      <div className="flex gap-3 align-items: stretch">
-        <div className="w-full">
+      <div className="flex flex-col lg:flex-row gap-3 w-full">
+        <div className="flex-1">
           <RenderYoutubeVideo videoUrl={videoUrl} />
         </div>
 
-        <div className="p-6 w-1/2 border-1 border-gray-300 rounded-lg ">
+        <div className="flex-1 p-6 border border-gray-300 rounded-lg">
           <h2 className="text-xl font-bold">{title}</h2>
           <p>{description}</p>
         </div>
