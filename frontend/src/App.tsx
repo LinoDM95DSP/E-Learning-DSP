@@ -13,7 +13,6 @@ import SidebarNavigation from "./components/layouts/sidebar_navigation";
 //Assets
 import { CiHome } from "react-icons/ci";
 import { CiGrid42 } from "react-icons/ci";
-import { PiNotebookThin } from "react-icons/pi";
 import { PiFlagThin } from "react-icons/pi";
 import { CiMedal } from "react-icons/ci";
 import { CiSettings } from "react-icons/ci";
@@ -22,14 +21,13 @@ import { CiLogout } from "react-icons/ci";
 
 const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Dashboard", to: "/dashboard", icon: <CiHome size={24} /> },
-  { title: "Module", to: "/modules", icon: <CiGrid42 size={24} /> },
-  { title: "Aufgaben", to: "/tasks", icon: <PiNotebookThin size={24} /> },
+  { title: "Module & Lerninhalte", to: "/modules", icon: <CiGrid42 size={24} /> },
   {
-    title: "Zwischenprüfung",
+    title: "Zwischenprüfungen",
     to: "/intermediate-examination",
     icon: <PiFlagThin size={24} />,
   },
-  { title: "Abschlussprüfung", to: "/final-exam", icon: <CiMedal size={24} /> },
+  { title: "Abschlussprüfungen", to: "/final-exam", icon: <CiMedal size={24} /> },
 ];
 
 const middleLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
@@ -56,13 +54,14 @@ function App() {
             bottomLinks={bottomLinksObj}
           />
         </div>
-        <div className="flex-grow overflow-auto pt-5 px-20">
+        <div className="flex-grow overflow-auto mt-5">
           <div className="flex items-center justify-center">
             <div className="flex border-1 rounded-full w-200 items-center justify-center">
               Global Searchfield
             </div>
           </div>
           {/* Content*/}
+          <div className="mx-20 my-20">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/modules" element={<Modules />} />
@@ -71,6 +70,7 @@ function App() {
             <Route path="/final-exam" element={<FinalExam />} />
             {/* Weitere Routen */}
           </Routes>
+          </div>
         </div>
       </div>
     </Router>
