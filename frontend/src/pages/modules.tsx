@@ -1,7 +1,7 @@
 // Modules.js
-import { Link } from 'react-router-dom';
-import CardPreviewSmall from '../components/cards/card_preview_small';
-import modulesObj from '../util/modules/modules_object';
+import { Link } from "react-router-dom";
+import CardPreviewSmall from "../components/cards/card_preview_small";
+import modulesObj from "../util/modules/modules_object";
 
 function Modules() {
   return (
