@@ -24,6 +24,28 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Hello World Programm",
+        description: "Schreiben Sie ein Programm, das 'Hello, World!' ausgibt.",
+      },
+      {
+        id: "task2",
+        title: "Einfache Berechnungen",
+        description: "Erstellen Sie ein Programm, das zwei Zahlen addiert.",
+      },
+      {
+        id: "task3",
+        title: "Hello World Programm",
+        description: "Schreiben Sie ein Programm, das 'Hello, World!' ausgibt.",
+      },
+      {
+        id: "task4",
+        title: "Einfache Berechnungen",
+        description: "Erstellen Sie ein Programm, das zwei Zahlen addiert.",
+      },
+    ],
   },
   {
     id: "python_advanced",
@@ -47,6 +69,18 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Dekoratoren implementieren",
+        description: "Erstellen Sie einen eigenen Dekorator in Python.",
+      },
+      {
+        id: "task2",
+        title: "Generatoren anwenden",
+        description: "Schreiben Sie eine Funktion, die Generatoren nutzt.",
+      },
+    ],
   },
   // Excel Module
   {
@@ -71,6 +105,18 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Basisformeln anwenden",
+        description: "Erstellen Sie Tabellen mit grundlegenden Formeln.",
+      },
+      {
+        id: "task2",
+        title: "Diagramme erstellen",
+        description: "Visualisieren Sie Daten mit verschiedenen Diagrammtypen.",
+      },
+    ],
   },
   {
     id: "excel_advanced",
@@ -94,6 +140,19 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Pivot-Tabelle erstellen",
+        description: "Erstellen Sie eine Pivot-Tabelle mit einem Datensatz.",
+      },
+      {
+        id: "task2",
+        title: "Datenanalyse durchführen",
+        description:
+          "Analysieren Sie komplexe Datensätze mithilfe von Excel-Tools.",
+      },
+    ],
   },
   // Power BI Module
   {
@@ -118,6 +177,19 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Bericht erstellen",
+        description: "Erstellen Sie einen interaktiven Bericht in Power BI.",
+      },
+      {
+        id: "task2",
+        title: "Datenmodellierung",
+        description:
+          "Modellieren Sie Daten und erstellen Sie Beziehungen zwischen Tabellen.",
+      },
+    ],
   },
   {
     id: "powerbi_advanced",
@@ -140,6 +212,19 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "DAX Formeln schreiben",
+        description:
+          "Schreiben Sie DAX Formeln zur Berechnung komplexer Kennzahlen.",
+      },
+      {
+        id: "task2",
+        title: "Erweiterte Datenmodellierung",
+        description: "Erstellen Sie ein optimiertes Datenmodell in Power BI.",
+      },
+    ],
   },
   // SQL Module
   {
@@ -163,6 +248,18 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Grundlegende SELECT-Abfrage",
+        description: "Schreiben Sie eine einfache SELECT-Abfrage.",
+      },
+      {
+        id: "task2",
+        title: "Daten filtern",
+        description: "Verwenden Sie WHERE-Klauseln, um Daten zu filtern.",
+      },
+    ],
   },
   {
     id: "sql_advanced",
@@ -186,6 +283,18 @@ const modulesObj = [
         },
       ],
     },
+    tasks: [
+      {
+        id: "task1",
+        title: "Komplexe Joins",
+        description: "Erstellen Sie Abfragen mit mehreren Joins.",
+      },
+      {
+        id: "task2",
+        title: "Index-Optimierung",
+        description: "Optimieren Sie Abfragen durch den Einsatz von Indizes.",
+      },
+    ],
   },
 ];
 

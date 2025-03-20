@@ -9,7 +9,7 @@ type SidebarLinkProps = {
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, children }) => {
   return (
-    <li className="mb-2">
+
       <NavLink
         to={to}
         className={({ isActive }) =>
@@ -23,7 +23,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, children }) => {
         )}
         <span className="transition-colors duration-200">{children}</span>
       </NavLink>
-    </li>
+
   );
 };
 

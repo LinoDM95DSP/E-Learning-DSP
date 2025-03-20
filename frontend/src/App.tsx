@@ -3,7 +3,7 @@ import "./App.css";
 import Dashboard from "./pages/dashboard";
 import Modules from "./pages/modules";
 import ModuleDetail from "./pages/module_detail";
-import Tasks from "./pages/tasks";
+import TaskDetails from "./pages/task_detail.tsx";
 import IntermediateExamination from "./pages/intermediate_examination";
 import FinalExam from "./pages/final_exam";
 // Utils
@@ -22,13 +22,21 @@ import { CiLogout } from "react-icons/ci";
 
 const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
   { title: "Dashboard", to: "/dashboard", icon: <CiHome size={24} /> },
-  { title: "Module & Lerninhalte", to: "/modules", icon: <CiGrid42 size={24} /> },
+  {
+    title: "Module & Lerninhalte",
+    to: "/modules",
+    icon: <CiGrid42 size={24} />,
+  },
   {
     title: "Zwischenprüfungen",
     to: "/intermediate-examination",
     icon: <PiFlagThin size={24} />,
   },
-  { title: "Abschlussprüfungen", to: "/final-exam", icon: <CiMedal size={24} /> },
+  {
+    title: "Abschlussprüfungen",
+    to: "/final-exam",
+    icon: <CiMedal size={24} />,
+  },
 ];
 
 const middleLinksObj: { title: string; to: string; icon?: ReactNode }[] = [
@@ -63,15 +71,22 @@ function App() {
           </div>
           {/* Content*/}
           <div className="mx-20 my-20">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/modules" element={<Modules />} />
-            <Route path="/modules/:moduleId" element={<ModuleDetail />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/intermediate-examination" element={<IntermediateExamination />} />
-            <Route path="/final-exam" element={<FinalExam />} />
-            {/* Weitere Routen */}
-          </Routes>
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/modules" element={<Modules />} />
+              <Route path="/modules/:moduleId" element={<ModuleDetail />} />
+              <Route
+                path="/module/:moduleId/task/:taskId"
+                element={<TaskDetails />}
+              />
+
+              <Route
+                path="/intermediate-examination"
+                element={<IntermediateExamination />}
+              />
+              <Route path="/final-exam" element={<FinalExam />} />
+              {/* Weitere Routen */}
+            </Routes>
           </div>
         </div>
       </div>
