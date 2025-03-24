@@ -1,14 +1,16 @@
 import React, { useRef, useEffect } from "react";
 import * as monaco from "monaco-editor";
 
-type CodeEditorBasicProps = {
+interface CodeEditorBasicProps {
   initialValue?: string;
   onChange: (newCode: string) => void;
-};
+  className?: string;
+}
 
 const CodeEditorBasic: React.FC<CodeEditorBasicProps> = ({
   initialValue = "",
   onChange,
+  className,
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorInstance = useRef<monaco.editor.IStandaloneCodeEditor | null>(
@@ -20,7 +22,7 @@ const CodeEditorBasic: React.FC<CodeEditorBasicProps> = ({
       editorInstance.current = monaco.editor.create(editorRef.current, {
         value: initialValue,
         language: "python",
-        theme: "vs-dark",
+        theme: "vs-light",
         automaticLayout: true,
       });
 
@@ -38,12 +40,7 @@ const CodeEditorBasic: React.FC<CodeEditorBasicProps> = ({
     }
   }, []); // Nur einmal initialisieren
 
-  return (
-    <div
-      ref={editorRef}
-      style={{ width: "600px", height: "600px", border: "1px solid #ccc" }}
-    ></div>
-  );
+  return <div className={className} ref={editorRef}></div>;
 };
 
 export default CodeEditorBasic;

@@ -7,7 +7,9 @@ interface Code {
 }
 
 const CodeEditorWithOutput: React.FC = () => {
-  const [initialCode, setInitialCode] = useState("");
+  const [initialCode, setInitialCode] = useState(
+    "# Schreibe hier dein Code rein..."
+  );
   const [output, setOutput] = useState("");
 
   const handleRunCode = () => {
@@ -27,23 +29,15 @@ const CodeEditorWithOutput: React.FC = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center">
+    <div className="w-full h-full">
+      <div className="flex items-center border-1 border-dsp-orange rounded-md bg-gray-100">
         <CodeEditorBasic
+          className="w-1/2 h-[500px]"
           initialValue={`${initialCode}`}
           onChange={setInitialCode}
         />
 
-        <div
-          style={{
-            marginTop: "1rem",
-            padding: "1rem",
-            border: "1px solid #ccc",
-            backgroundColor: "#fff",
-            width: "600px",
-            height: "600px",
-          }}
-        >
+        <div className="">
           <h3>Output:</h3>
           <pre>{output}</pre>
         </div>

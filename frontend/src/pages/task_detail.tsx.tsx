@@ -20,7 +20,7 @@ function TaskDetails() {
   const previousTask = tasks[currentTaskIndex - 1];
 
   return (
-    <div className="">
+    <div className="h-screen">
       <div className="flex">
         <div>
           <h1 className="text-xl font-bold">
