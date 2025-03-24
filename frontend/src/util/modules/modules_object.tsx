@@ -8,22 +8,44 @@ const modulesObj = [
     imageSrc: ExampleImage,
     title: "Python Grundlagen",
     progress: 100,
-    content: {
-      videoUrl: "https://www.youtube.com/embed/rfscVS0vtbw",
-      title: "Python für Anfänger",
-      description: "Erlernen Sie die Grundlagen der Python-Programmierung.",
-      supplementaryTitle: "Weiterführende Ressourcen",
-      supplementaryContent: [
-        {
-          label: "Offizielle Python-Dokumentation",
-          url: "https://docs.python.org/3/",
-        },
-        {
-          label: "Python Tutorial auf W3Schools",
-          url: "https://www.w3schools.com/python/",
-        },
-      ],
-    },
+    content: [
+      {
+        contentId: "1",
+        videoUrl: "https://www.youtube.com/embed/HGOBQPFzWKo",
+        title: "Fortgeschrittene Python-Konzepte",
+        description:
+          "Vertiefen Sie Ihr Wissen in Python mit fortgeschrittenen Themen.",
+        supplementaryTitle: "Weiterführende Ressourcen",
+        supplementaryContent: [
+          {
+            label: "Python Decorators - Real Python",
+            url: "https://realpython.com/primer-on-python-decorators/",
+          },
+          {
+            label: "Python Generators - GeeksforGeeks",
+            url: "https://www.geeksforgeeks.org/generators-in-python/",
+          },
+        ],
+      },
+      {
+        contentId: "2",
+        videoUrl: "https://www.youtube.com/embed/HGOBQPFzWKo",
+        title: "Python Pandas und Numpy",
+        description:
+          "Vertiefen Sie Ihr Wissen in Python mit fortgeschrittenen Themen bezüglich Pandas und Numpy.",
+        supplementaryTitle: "Weiterführende Ressourcen",
+        supplementaryContent: [
+          {
+            label: "Python Decorators - Real Python",
+            url: "https://realpython.com/primer-on-python-decorators/",
+          },
+          {
+            label: "Python Generators - GeeksforGeeks",
+            url: "https://www.geeksforgeeks.org/generators-in-python/",
+          },
+        ],
+      },
+    ],
     tasks: [
       {
         id: "task1",
@@ -52,23 +74,44 @@ const modulesObj = [
     imageSrc: ExampleImage,
     title: "Fortgeschrittenes Python",
     progress: 75,
-    content: {
-      videoUrl: "https://www.youtube.com/embed/HGOBQPFzWKo",
-      title: "Fortgeschrittene Python-Konzepte",
-      description:
-        "Vertiefen Sie Ihr Wissen in Python mit fortgeschrittenen Themen.",
-      supplementaryTitle: "Weiterführende Ressourcen",
-      supplementaryContent: [
-        {
-          label: "Python Decorators - Real Python",
-          url: "https://realpython.com/primer-on-python-decorators/",
-        },
-        {
-          label: "Python Generators - GeeksforGeeks",
-          url: "https://www.geeksforgeeks.org/generators-in-python/",
-        },
-      ],
-    },
+    content: [
+      {
+        contentId: "1",
+        videoUrl: "https://www.youtube.com/embed/HGOBQPFzWKo",
+        title: "Fortgeschrittene Python-Konzepte",
+        description:
+          "Vertiefen Sie Ihr Wissen in Python mit fortgeschrittenen Themen.",
+        supplementaryTitle: "Weiterführende Ressourcen",
+        supplementaryContent: [
+          {
+            label: "Python Decorators - Real Python",
+            url: "https://realpython.com/primer-on-python-decorators/",
+          },
+          {
+            label: "Python Generators - GeeksforGeeks",
+            url: "https://www.geeksforgeeks.org/generators-in-python/",
+          },
+        ],
+      },
+      {
+        contentId: "2",
+        videoUrl: "https://www.youtube.com/embed/HGOBQPFzWKo",
+        title: "Fortgeschrittene Python-Konzepte",
+        description:
+          "Vertiefen Sie Ihr Wissen in Python mit fortgeschrittenen Themen.",
+        supplementaryTitle: "Weiterführende Ressourcen",
+        supplementaryContent: [
+          {
+            label: "Python Decorators - Real Python",
+            url: "https://realpython.com/primer-on-python-decorators/",
+          },
+          {
+            label: "Python Generators - GeeksforGeeks",
+            url: "https://www.geeksforgeeks.org/generators-in-python/",
+          },
+        ],
+      },
+    ],
     tasks: [
       {
         id: "task1",

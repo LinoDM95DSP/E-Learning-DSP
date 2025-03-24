@@ -1,10 +1,17 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useRef } from "react";
+import { Swiper, SwiperSlide } from "swiper/react"; // React-Komponenten
+import type { Swiper as SwiperClass } from "swiper"; // Core-Swiper-Typ
+import "swiper/css";
+
+import { TbTriangleInvertedFilled } from "react-icons/tb";
+
 import modulesObj from "../util/modules/modules_object";
 import LearningContentVideoLayout from "../components/layouts/learning_content_video";
-import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
-import { IoIosArrowRoundForward } from "react-icons/io";
+import ButtonSwipe from "../components/ui_elements/buttons/button_swipe";
 
 function ModuleDetail() {
+  const swiperRef = useRef<SwiperClass | null>(null);
   const { moduleId } = useParams();
   const navigate = useNavigate();
 
@@ -16,16 +23,57 @@ function ModuleDetail() {
 
   const tasks = module.tasks || [];
 
+  const handleNext = () => {
+    if (swiperRef.current) {
+      swiperRef.current.slideNext();
+    }
+  };
+
+  const handlePrev = () => {
+    if (swiperRef.current) {
+      swiperRef.current.slidePrev();
+    }
+  };
+
   return (
     <div>
-      <h1>{module.title}</h1>
-      <LearningContentVideoLayout {...module.content} />
+      <div className="flex justify-between my-4">
+        <ButtonSwipe
+          onClick={handlePrev}
+          icon={<TbTriangleInvertedFilled />}
+          classNameIcon="rotate-90"
+        />
+        <h1 className="text-2xl">{module.title}</h1>
+        <ButtonSwipe
+          onClick={handleNext}
+          icon={<TbTriangleInvertedFilled />}
+          classNameIcon="rotate-270"
+        />
+      </div>
+
+      {Array.isArray(module.content) ? (
+        <Swiper
+          spaceBetween={20}
+          slidesPerView={1}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
+          }}
+        >
+          {module.content.map((video) => (
+            <SwiperSlide key={video.contentId}>
+              <LearningContentVideoLayout {...video} />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      ) : (
+        <LearningContentVideoLayout {...module.content} />
+      )}
 
       {/* Aufgabenliste */}
       <div className="mt-5">
         <h2 className="text-lg font-semibold">Aufgaben</h2>
         {tasks.length > 0 ? (
-          <ul className="mt-3 space-y-3">
+          <ul className=" space-y-3">
             {tasks.map((task) => (
               <li
                 key={task.id}

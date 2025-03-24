@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import modulesObj from "../util/modules/modules_object";
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
+import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
 import { IoIosArrowRoundForward } from "react-icons/io";
+import CodeEditorWithOutput from "../components/ui_elements/code_editor/code_editor_with_output";
 
 function TaskDetails() {
   const { moduleId, taskId } = useParams();
@@ -15,23 +17,33 @@ function TaskDetails() {
   const tasks = module.tasks || [];
   const currentTaskIndex = tasks.findIndex((t) => t.id === taskId);
   const nextTask = tasks[currentTaskIndex + 1];
+  const previousTask = tasks[currentTaskIndex - 1];
 
   return (
-    <div>
-      <h1 className="text-xl font-bold">{tasks[currentTaskIndex]?.title}</h1>
-      <p className="text-gray-700 mt-2">
-        {tasks[currentTaskIndex]?.description}
-      </p>
-
-      <div className="flex justify-end mt-5">
-        {/* Button zur nächsten Aufgabe */}
-        {nextTask && (
-          <ButtonPrimary
-            title="Nächste Aufgabe"
-            icon={<IoIosArrowRoundForward size={30} />}
-            onClick={() => navigate(`/module/${moduleId}/task/${nextTask.id}`)}
-          />
-        )}
+    <div className="">
+      <div className="flex">
+        <div>
+          <h1 className="text-xl font-bold">
+            {tasks[currentTaskIndex]?.title}
+          </h1>
+          <p className="text-gray-700 mt-2">
+            {tasks[currentTaskIndex]?.description}
+          </p>
+        </div>
+        <CodeEditorWithOutput />
+      </div>
+      <div className="flex justify-between mt-5">
+        <ButtonSecondary
+          title="Vorherige Aufgabe"
+          onClick={() =>
+            navigate(`/module/${moduleId}/task/${previousTask.id}`)
+          }
+        />
+        <ButtonPrimary
+          title="Nächste Aufgabe"
+          icon={<IoIosArrowRoundForward size={30} />}
+          onClick={() => navigate(`/module/${moduleId}/task/${nextTask.id}`)}
+        />
       </div>
     </div>
   );

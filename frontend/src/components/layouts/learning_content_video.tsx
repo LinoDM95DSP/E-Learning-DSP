@@ -15,8 +15,8 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
   supplementaryContent,
 }) => {
   return (
-    <div className="flex flex-col gap-10 justify-center items-center">
-      <div className="flex flex-col lg:flex-row gap-3 w-full">
+    <div className="flex flex-col gap-7 justify-center items-center">
+      <div className="flex flex-col lg:flex-row gap-7 w-full">
         <div className="flex-1">
           <RenderYoutubeVideo videoUrl={videoUrl} />
         </div>

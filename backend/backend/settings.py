@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-2u17c0synl42*!h34-1b^f+hzfo(1exfv_el7$lm(bec9*hq+b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
 
 
 # Application definition
@@ -37,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     
     
     
@@ -46,16 +50,21 @@ INSTALLED_APPS = [
     "learning_tasks",
     "intermediate_examination",
     "final_exam",
+    "code_editor",
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+        'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
 ]
 
 ROOT_URLCONF = 'backend.urls'
