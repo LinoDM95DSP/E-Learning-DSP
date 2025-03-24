@@ -19,7 +19,6 @@ const CodeEditorWithOutput: React.FC = () => {
     console.log("userCode:", userCode);
     api
       .post<Code>("/code_editor/execute_python_code/", userCode)
-
       .then((response) => {
         console.log("code executed:", response);
 
