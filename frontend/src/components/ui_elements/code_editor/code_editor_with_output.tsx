@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// CodeEditorWithOutput.tsx
+import React, { useState, useImperativeHandle, forwardRef } from "react";
 import CodeEditorBasic from "./code_editor_basic";
 import { api } from "../../../util/apis/initial_api";
 
@@ -6,50 +7,53 @@ interface Code {
   code: string;
 }
 
-const CodeEditorWithOutput: React.FC = () => {
+export interface CodeEditorWithOutputHandle {
+  handleRunCode: () => void;
+}
+
+interface CodeEditorWithOutputProps {}
+
+const CodeEditorWithOutput = forwardRef<
+  CodeEditorWithOutputHandle,
+  CodeEditorWithOutputProps
+>((props, ref) => {
   const [initialCode, setInitialCode] = useState(
-    "# Schreibe hier dein Code rein..."
+    "# Schreibe hier deinen Code rein..."
   );
   const [output, setOutput] = useState("");
 
   const handleRunCode = () => {
-    const userCode: Code = {
-      code: initialCode,
-    };
+    const userCode: Code = { code: initialCode };
     console.log("userCode:", userCode);
     api
-      .post<Code>("/code_editor/execute_python_code/", userCode)
+      .post<{ code: string }>("/code_editor/execute_python_code/", userCode)
       .then((response) => {
         console.log("code executed:", response);
-
         setOutput(response.code);
       })
       .catch((error) => console.error("Error code execution:", error));
   };
 
+  useImperativeHandle(ref, () => ({
+    handleRunCode,
+  }));
+
   return (
-    <div className="w-full h-full">
-      <div className="flex items-center border-1 border-dsp-orange rounded-md bg-gray-100">
+    <div className=" w-full h-full rounded-lg shadow-sm">
+      <div className="flex rounded-md bg-dsp-orange_light">
         <CodeEditorBasic
-          className="w-1/2 h-[500px]"
-          initialValue={`${initialCode}`}
+          className="w-1/2 h-[600px]"
+          initialValue={initialCode}
           onChange={setInitialCode}
         />
 
-        <div className="">
+        <div className="w-1/2 h-[600px] overflow-y-auto p-4 border-l-2 border-gray-300">
           <h3>Output:</h3>
-          <pre>{output}</pre>
+          <pre className="whitespace-pre-wrap break-all">{output}</pre>
         </div>
       </div>
-      <button
-        className="hover:cursor-pointer border-1 p-1"
-        onClick={handleRunCode}
-        style={{ marginTop: "1rem" }}
-      >
-        Code ausführen
-      </button>
     </div>
   );
-};
+});
 
 export default CodeEditorWithOutput;

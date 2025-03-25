@@ -1,9 +1,13 @@
+// TaskDetails.tsx
+import React, { useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import modulesObj from "../util/modules/modules_object";
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
 import { IoIosArrowRoundForward } from "react-icons/io";
-import CodeEditorWithOutput from "../components/ui_elements/code_editor/code_editor_with_output";
+import CodeEditorWithOutput, {
+  CodeEditorWithOutputHandle,
+} from "../components/ui_elements/code_editor/code_editor_with_output";
 
 function TaskDetails() {
   const { moduleId, taskId } = useParams();
@@ -13,16 +17,17 @@ function TaskDetails() {
   if (!module) {
     return <p>Modul nicht gefunden.</p>;
   }
-
   const tasks = module.tasks || [];
   const currentTaskIndex = tasks.findIndex((t) => t.id === taskId);
   const nextTask = tasks[currentTaskIndex + 1];
   const previousTask = tasks[currentTaskIndex - 1];
 
+  const editorRef = useRef<CodeEditorWithOutputHandle>(null);
+
   return (
-    <div className="h-screen">
-      <div className="flex">
-        <div>
+    <div className="">
+      <div className="flex rounded-md">
+        <div className="w-1/3 ">
           <h1 className="text-xl font-bold">
             {tasks[currentTaskIndex]?.title}
           </h1>
@@ -30,7 +35,8 @@ function TaskDetails() {
             {tasks[currentTaskIndex]?.description}
           </p>
         </div>
-        <CodeEditorWithOutput />
+        {/* Den Ref an CodeEditorWithOutput übergeben */}
+        <CodeEditorWithOutput ref={editorRef} />
       </div>
       <div className="flex justify-between mt-5">
         <ButtonSecondary
@@ -38,6 +44,11 @@ function TaskDetails() {
           onClick={() =>
             navigate(`/module/${moduleId}/task/${previousTask.id}`)
           }
+        />
+        {/* Externer Button, der die Funktion im CodeEditorWithOutput ausführt */}
+        <ButtonPrimary
+          title="Code ausführen"
+          onClick={() => editorRef.current?.handleRunCode()}
         />
         <ButtonPrimary
           title="Nächste Aufgabe"
