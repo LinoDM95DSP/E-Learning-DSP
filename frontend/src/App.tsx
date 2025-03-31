@@ -4,7 +4,6 @@ import Dashboard from "./pages/dashboard";
 import Modules from "./pages/modules";
 import ModuleDetail from "./pages/module_detail";
 import TaskDetails from "./pages/task_detail.tsx";
-import IntermediateExamination from "./pages/intermediate_examination";
 import FinalExam from "./pages/final_exam";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -14,7 +13,6 @@ import SidebarNavigation from "./components/layouts/sidebar_navigation";
 //Assets
 import { CiHome } from "react-icons/ci";
 import { CiGrid42 } from "react-icons/ci";
-import { PiFlagThin } from "react-icons/pi";
 import { CiMedal } from "react-icons/ci";
 import { CiSettings } from "react-icons/ci";
 import { TfiStatsUp } from "react-icons/tfi";
@@ -26,11 +24,6 @@ const navigationObj: { title: string; to: string; icon?: ReactNode }[] = [
     title: "Module & Lerninhalte",
     to: "/modules",
     icon: <CiGrid42 size={24} />,
-  },
-  {
-    title: "Zwischenprüfungen",
-    to: "/intermediate-examination",
-    icon: <PiFlagThin size={24} />,
   },
   {
     title: "Abschlussprüfungen",
@@ -78,11 +71,6 @@ function App() {
               <Route
                 path="/module/:moduleId/task/:taskId"
                 element={<TaskDetails />}
-              />
-
-              <Route
-                path="/intermediate-examination"
-                element={<IntermediateExamination />}
               />
               <Route path="/final-exam" element={<FinalExam />} />
               {/* Weitere Routen */}

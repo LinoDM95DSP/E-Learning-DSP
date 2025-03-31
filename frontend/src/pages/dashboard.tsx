@@ -1,43 +1,16 @@
+import MinimalGaugeChart from "../components/charts/chart_gauge";
+import ProgressbarMinimal from "../components/charts/progressbar_minimal";
+
 function Dashboard() {
   return (
     <div className="">
       <h1>Dashboard</h1>
-      <p>
-        Lorem ipsum dolor, sit amet consectetur adipisicing elit. Repudiandae
-        numquam iure mollitia atque at, ipsa voluptas facere? Vel porro,
-        deserunt itaque laudantium nostrum libero hic aliquam labore non optio
-        tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore. Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-        Repudiandae numquam iure mollitia atque at, ipsa voluptas facere? Vel
-        porro, deserunt itaque laudantium nostrum libero hic aliquam labore non
-        optio tempore.
-      </p>
+      <div className="flex items-center">
+        <div className="w-80">
+          <ProgressbarMinimal progressValue={60} />
+        </div>
+        <MinimalGaugeChart progressValue={10} />
+      </div>
     </div>
   );
 }

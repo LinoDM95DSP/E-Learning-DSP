@@ -35,7 +35,6 @@ function TaskDetails() {
             {tasks[currentTaskIndex]?.description}
           </p>
         </div>
-        {/* Den Ref an CodeEditorWithOutput übergeben */}
         <CodeEditorWithOutput ref={editorRef} />
       </div>
       <div className="flex justify-between mt-5">
@@ -45,7 +44,6 @@ function TaskDetails() {
             navigate(`/module/${moduleId}/task/${previousTask.id}`)
           }
         />
-        {/* Externer Button, der die Funktion im CodeEditorWithOutput ausführt */}
         <ButtonPrimary
           title="Code ausführen"
           onClick={() => editorRef.current?.handleRunCode()}

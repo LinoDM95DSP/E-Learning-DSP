@@ -69,7 +69,6 @@ function ModuleDetail() {
         <LearningContentVideoLayout {...module.content} />
       )}
 
-      {/* Aufgabenliste */}
       <div className="mt-5">
         <h2 className="text-lg font-semibold">Aufgaben</h2>
         {tasks.length > 0 ? (
