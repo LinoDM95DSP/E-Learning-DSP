@@ -5,6 +5,8 @@ import Modules from "./pages/modules";
 import ModuleDetail from "./pages/module_detail";
 import TaskDetails from "./pages/task_detail.tsx";
 import FinalExam from "./pages/final_exam";
+import Statistics from "./pages/statistics";
+import LandingPage from "./pages/landing_page";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ReactNode } from "react";
@@ -14,6 +16,7 @@ import HeaderNavigation from "./components/layouts/header.tsx";
 import LogoDSP from "./assets/dsp_no_background.png";
 
 const mainNav: { title: string; to: string; icon?: ReactNode }[] = [
+  { title: "Startseite", to: "/" },
   { title: "Dashboard", to: "/dashboard" },
   {
     title: "Module & Lerninhalte",
@@ -46,9 +49,10 @@ function App() {
         />
 
         {/* Main Content */}
-        <main className="flex-grow overflow-auto ">
+        <main className="flex-grow overflow-auto  ">
           <div className="mx-20 my-10 ">
             <Routes>
+              <Route path="/" element={<LandingPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/modules" element={<Modules />} />
               <Route path="/modules/:moduleId" element={<ModuleDetail />} />
@@ -57,6 +61,7 @@ function App() {
                 element={<TaskDetails />}
               />
               <Route path="/final-exam" element={<FinalExam />} />
+              <Route path="/user-stats" element={<Statistics />} />
             </Routes>
           </div>
         </main>

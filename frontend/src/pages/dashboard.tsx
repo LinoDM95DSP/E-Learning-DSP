@@ -334,60 +334,77 @@ function Dashboard() {
                 : null;
 
               return (
+                // Link als äußerster Container der Karte
                 <Link
                   key={module.id}
                   to={`/modules/${module.id}`}
-                  className="flex items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-dsp-orange transition duration-200 ease-in-out group"
+                  // Padding anpassen, flex-col hinzufügen
+                  className="block bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-dsp-orange transition duration-200 ease-in-out group flex flex-col"
                 >
-                  {/* Thumbnail oder Platzhalter */}
-                  {thumbnailUrl ? (
-                    <img
-                      src={thumbnailUrl}
-                      alt={`${module.title} thumbnail`}
-                      className="w-16 h-10 object-cover rounded mr-4 flex-shrink-0 bg-gray-200" // Hintergrund für Ladezustand
-                      onError={(e) => {
-                        // Fallback, falls Thumbnail nicht geladen werden kann
-                        (e.target as HTMLImageElement).style.display = "none";
-                        // Optional: Zeige wieder Platzhalter
-                        const placeholder = document.createElement("div");
-                        placeholder.className =
-                          "w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0";
-                        (e.target as HTMLImageElement).parentNode?.insertBefore(
-                          placeholder,
-                          e.target as HTMLImageElement
-                        );
-                      }}
-                    />
-                  ) : (
-                    <div className="w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0"></div>
-                  )}
+                  {/* Obere Zeile: Thumbnail, Titel, Play Button */}
+                  <div className="flex items-center w-full mb-3">
+                    {/* Thumbnail oder Platzhalter */}
+                    {thumbnailUrl ? (
+                      <img
+                        src={thumbnailUrl}
+                        alt={`${module.title} thumbnail`}
+                        className="w-16 h-10 object-cover rounded mr-4 flex-shrink-0 bg-gray-200" // Hintergrund für Ladezustand
+                        onError={(e) => {
+                          // Fallback, falls Thumbnail nicht geladen werden kann
+                          (e.target as HTMLImageElement).style.display = "none";
+                          // Optional: Zeige wieder Platzhalter
+                          const placeholder = document.createElement("div");
+                          placeholder.className =
+                            "w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0";
+                          (
+                            e.target as HTMLImageElement
+                          ).parentNode?.insertBefore(
+                            placeholder,
+                            e.target as HTMLImageElement
+                          );
+                        }}
+                      />
+                    ) : (
+                      <div className="w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0"></div>
+                    )}
 
-                  {/* Rest der Modul-Info (Titel, Zeit, Fortschritt, Play-Button) */}
-                  <div className="flex-grow">
-                    <h3 className="text-md font-semibold text-gray-800 group-hover:text-dsp-orange mb-1">
-                      {module.title}
-                    </h3>
-                    <p className="text-xs text-gray-500">Platzhalter Zeit</p>
+                    {/* Titel + Zeit (nimmt Restplatz ein) */}
+                    <div className="flex-grow mr-4">
+                      <h3 className="text-md font-semibold text-gray-800 group-hover:text-dsp-orange mb-1">
+                        {module.title}
+                      </h3>
+                      <p className="text-xs text-gray-500">Platzhalter Zeit</p>
+                    </div>
+
+                    {/* Play Button */}
+                    <IoPlayCircleOutline
+                      size={28}
+                      className="text-dsp-orange flex-shrink-0"
+                    />
                   </div>
-                  <div className="w-1/3 mx-4 flex items-center flex-shrink-0">
-                    {module.progress !== undefined && (
-                      <>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mr-3">
-                          <div
-                            className="bg-dsp-orange h-1.5 rounded-full"
-                            style={{ width: `${module.progress}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-600 w-10 text-right">
+
+                  {/* Untere Zeile: Fortschrittsbalken (volle Breite) */}
+                  {module.progress !== undefined && (
+                    // Container für den Fortschritt, mt für Abstand
+                    <div className="w-full mt-3">
+                      {/* Labels über dem Balken */}
+                      <div className="flex justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700">
+                          Fortschritt
+                        </span>
+                        <span className="text-xs font-medium text-gray-700">
                           {module.progress}%
                         </span>
-                      </>
-                    )}
-                  </div>
-                  <IoPlayCircleOutline
-                    size={28}
-                    className="text-dsp-orange flex-shrink-0"
-                  />
+                      </div>
+                      {/* Balken */}
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className="bg-dsp-orange h-1.5 rounded-full"
+                          style={{ width: `${module.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
                 </Link>
               );
             })}
