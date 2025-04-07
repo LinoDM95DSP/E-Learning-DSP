@@ -96,15 +96,21 @@ function TaskDetails() {
           </div>
           {currentTask.hint && (
             <div className="mt-auto border-t border-gray-200 pt-4">
-              {isHintVisible && (
-                <div className="p-4 rounded-lg bg-dsp-orange_light border border-dsp-orange mb-4">
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out mb-4 ${
+                  isHintVisible
+                    ? "max-h-[200px] opacity-100"
+                    : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="p-4 rounded-lg bg-dsp-orange_light border border-dsp-orange">
                   <div className="flex items-center gap-2 text-dsp-orange font-semibold mb-2">
                     <IoBulbOutline size={20} />
                     <span>Hinweis</span>
                   </div>
                   <p className="text-sm text-gray-800">{currentTask.hint}</p>
                 </div>
-              )}
+              </div>
               <ButtonSecondary
                 title={
                   isHintVisible ? "Hinweis ausblenden" : "Hinweis anzeigen"

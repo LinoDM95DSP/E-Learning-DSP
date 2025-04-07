@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 import {
   IoCheckmarkCircleOutline,
@@ -138,28 +138,52 @@ const userPosition =
 
 function Statistics() {
   const [activeTab, setActiveTab] = useState<TabState>("übersicht");
+  const [sliderStyle, setSliderStyle] = useState({});
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const breadcrumbItems = [
     { label: "Dashboard", path: "/dashboard" },
     { label: "Statistik" },
   ];
 
+  useEffect(() => {
+    const container = tabsRef.current;
+    if (!container) return;
+
+    const activeButton = container.querySelector<HTMLButtonElement>(
+      `[data-tab="${activeTab}"]`
+    );
+    if (activeButton) {
+      setSliderStyle({
+        left: activeButton.offsetLeft,
+        width: activeButton.offsetWidth,
+      });
+    }
+  }, [activeTab]);
+
   const renderTabs = () => (
-    <div className="flex space-x-1 border border-gray-300 p-1 rounded-lg bg-gray-100 mb-8 self-start">
+    <div
+      ref={tabsRef}
+      className="relative flex space-x-1 border border-gray-300 p-1 rounded-lg bg-gray-100 mb-8 self-start"
+    >
+      <div
+        className="absolute inset-y-0 bg-dsp-orange rounded-md shadow-sm transition-all duration-300 ease-out pointer-events-none"
+        style={sliderStyle}
+      />
       {(
         ["übersicht", "fortschritt", "leistung", "vergleich"] as TabState[]
       ).map((tab) => (
         <button
           key={tab}
+          data-tab={tab}
           onClick={() => setActiveTab(tab)}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 
+          className={`relative z-10 px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer 
             ${
               activeTab === tab
-                ? "bg-dsp-orange text-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-200"
+                ? "text-white"
+                : "text-gray-600 hover:text-gray-800"
             }`}
         >
-          {/* Capitalize first letter */}
           {tab.charAt(0).toUpperCase() + tab.slice(1)}
         </button>
       ))}

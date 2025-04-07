@@ -119,13 +119,17 @@ const CodeEditorWithOutput: React.FC = () => {
             )}
           </button>
         </div>
-        {isOutputVisible && (
-          <div className="h-[200px] overflow-y-auto p-3 border border-gray-300 bg-gray-50 rounded-lg">
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            isOutputVisible ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="max-h-[200px] overflow-y-auto h-auto p-3 border border-gray-300 bg-gray-50 rounded-lg">
             <pre className="text-sm whitespace-pre-wrap break-words">
-              {output}
+              {output || " "}
             </pre>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
