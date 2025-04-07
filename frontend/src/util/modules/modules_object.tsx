@@ -54,12 +54,14 @@ const modulesObj = [
         title: "Zähler mit JS",
         description: "Erstelle einen Klickzähler in HTML und JS.",
         difficulty: "Einfach",
+        hint: "Du benötigst einen Button in HTML und eine JavaScript-Funktion, die eine Variable bei jedem Klick erhöht und den neuen Wert anzeigt.",
       },
       {
         id: "task2",
         title: "Taschenrechner bauen",
         description: "Programmiere einen kleinen JS-Taschenrechner.",
         difficulty: "Einfach",
+        hint: "Erstelle Buttons für Zahlen und Operatoren. Speichere die aktuelle Eingabe und führe die Berechnung durch, wenn ein Operator oder Gleichheitszeichen geklickt wird.",
       },
       {
         id: "task3",
@@ -67,6 +69,7 @@ const modulesObj = [
         description:
           "Wähle HTML-Elemente aus und ändere deren Inhalt oder Stil.",
         difficulty: "Einfach",
+        hint: "Verwende `document.getElementById` oder `document.querySelector`, um Elemente zu finden, und ändere dann Eigenschaften wie `.innerHTML` oder `.style`.",
       },
       {
         id: "task4",
@@ -74,12 +77,14 @@ const modulesObj = [
         description:
           "Reagiere auf Benutzerinteraktionen wie Klicks oder Tastatureingaben.",
         difficulty: "Mittel",
+        hint: "Füge Event Listener zu HTML-Elementen hinzu, z.B. mit `element.addEventListener('click', deineFunktion);`.",
       },
       {
         id: "task5",
         title: "Arrays und Schleifen",
         description: "Iteriere über eine Liste von Daten und zeige sie an.",
         difficulty: "Mittel",
+        hint: "Verwende eine `for`-Schleife oder die `forEach`-Methode, um durch die Elemente eines Arrays zu gehen.",
       },
       {
         id: "task6",
@@ -87,18 +92,21 @@ const modulesObj = [
         description:
           "Definiere eigene Datenstrukturen mithilfe von JavaScript-Objekten.",
         difficulty: "Mittel",
+        hint: "Ein Objekt wird mit geschweiften Klammern `{}` definiert und enthält Schlüssel-Wert-Paare, z.B. `{ name: 'Max', alter: 30 }`.",
       },
       {
         id: "task7",
         title: "API-Aufruf mit Fetch",
         description: "Rufe Daten von einer einfachen öffentlichen API ab.",
         difficulty: "Mittel",
+        hint: "Nutze die `fetch()`-Funktion, um eine Anfrage zu senden. Denke daran, die Antwort mit `.then(res => res.json())` zu verarbeiten.",
       },
       {
         id: "task8",
         title: "Formularvalidierung",
         description: "Überprüfe Benutzereingaben in einem HTML-Formular.",
         difficulty: "Schwer",
+        hint: "Greife auf die Werte der Formularfelder zu und prüfe sie mit JavaScript, bevor das Formular abgeschickt wird. Zeige Fehlermeldungen an.",
       },
       {
         id: "task9",
@@ -106,6 +114,7 @@ const modulesObj = [
         description:
           "Speichere und lies einfache Daten im Local Storage des Browsers.",
         difficulty: "Schwer",
+        hint: "Verwende `localStorage.setItem('schluessel', 'wert')` zum Speichern und `localStorage.getItem('schluessel')` zum Lesen.",
       },
       {
         id: "task10",
@@ -113,6 +122,7 @@ const modulesObj = [
         description:
           "Verwende Promises oder async/await, um asynchrone Operationen zu handhaben.",
         difficulty: "Schwer",
+        hint: "`async/await` vereinfacht die Arbeit mit Promises. Markiere die Funktion mit `async` und verwende `await` vor dem Promise (z.B. `await fetch(...)`).",
       },
     ],
   },
@@ -187,18 +197,21 @@ const modulesObj = [
         title: "Datensatz analysieren",
         description: "Analysiere CSV-Daten mit Pandas.",
         difficulty: "Einfach",
+        hint: "Importiere Pandas (`import pandas as pd`). Lade die CSV mit `pd.read_csv('datei.csv')`. Verwende `.head()`, `.describe()` oder `.info()` zur ersten Analyse.",
       },
       {
         id: "task2",
         title: "Diagramm erstellen",
         description: "Zeichne einen Plot mit Matplotlib.",
         difficulty: "Einfach",
+        hint: "Importiere Matplotlib (`import matplotlib.pyplot as plt`). Verwende `plt.plot(x_werte, y_werte)` oder andere Plot-Funktionen und zeige es mit `plt.show()` an.",
       },
       {
         id: "task3",
         title: "Pandas DataFrame erstellen",
         description: "Erstelle manuell ein einfaches Pandas DataFrame.",
         difficulty: "Einfach",
+        hint: "Verwende `pd.DataFrame()` und übergebe ein Dictionary, wobei die Schlüssel die Spaltennamen und die Werte Listen sind.",
       },
       {
         id: "task4",
@@ -206,6 +219,7 @@ const modulesObj = [
         description:
           "Identifiziere und behandle fehlende Werte in einem Datensatz.",
         difficulty: "Mittel",
+        hint: "Verwende `.isnull().sum()` um fehlende Werte zu finden. Nutze `.dropna()` zum Entfernen oder `.fillna()` zum Ersetzen.",
       },
       {
         id: "task5",
@@ -213,6 +227,7 @@ const modulesObj = [
         description:
           "Gruppiere Daten nach einer Kategorie und berechne Mittelwerte.",
         difficulty: "Mittel",
+        hint: "Nutze die `.groupby('spaltenname')`-Methode gefolgt von einer Aggregationsfunktion wie `.mean()`, `.sum()` oder `.count()`.",
       },
       {
         id: "task6",
@@ -220,6 +235,7 @@ const modulesObj = [
         description:
           "Führe grundlegende mathematische Operationen auf Numpy Arrays durch.",
         difficulty: "Mittel",
+        hint: "Importiere Numpy (`import numpy as np`). Erstelle Arrays mit `np.array([...])`. Mathematische Operationen (+, -, *, /) funktionieren elementweise.",
       },
       {
         id: "task7",
@@ -227,12 +243,14 @@ const modulesObj = [
         description:
           "Trainiere ein einfaches lineares Regressionsmodell mit scikit-learn.",
         difficulty: "Schwer",
+        hint: "Importiere `LinearRegression` aus `sklearn.linear_model`. Erstelle ein Modell-Objekt, trainiere es mit `.fit(X, y)` und mache Vorhersagen mit `.predict(X_neu)`.",
       },
       {
         id: "task8",
         title: "Daten aus CSV laden",
         description: "Lade Daten aus einer CSV-Datei in ein Pandas DataFrame.",
         difficulty: "Einfach",
+        hint: "Der Befehl `pandas.read_csv('pfad/zur/datei.csv')` ist hierfür zentral.",
       },
       {
         id: "task9",
@@ -240,6 +258,7 @@ const modulesObj = [
         description:
           "Erstelle ein Histogramm und ein Streudiagramm mit Matplotlib.",
         difficulty: "Mittel",
+        hint: "Verwende `plt.hist()` für Histogramme und `plt.scatter()` für Streudiagramme.",
       },
       {
         id: "task10",
@@ -247,6 +266,7 @@ const modulesObj = [
         description:
           "Berechne grundlegende statistische Kennzahlen für einen Datensatz.",
         difficulty: "Mittel",
+        hint: "Die `.describe()`-Methode eines Pandas DataFrames liefert viele nützliche statistische Kennzahlen auf einmal.",
       },
     ],
   },
@@ -280,6 +300,7 @@ const modulesObj = [
         title: "HTML Grundgerüst erstellen",
         description: "Baue ein Grundgerüst für eine Webseite mit HTML.",
         difficulty: "Einfach",
+        hint: "Jedes HTML-Dokument braucht `<html>`, `<head>` und `<body>`. Im `<head>` stehen Metadaten wie der `<title>`.",
       },
       {
         id: "task2",
@@ -341,6 +362,7 @@ const modulesObj = [
         description:
           "Style Elemente basierend auf ihrem Tag-Namen, ihrer Klasse oder ID.",
         difficulty: "Mittel",
+        hint: "Tag-Selektor: `p { ... }`, Klassen-Selektor: `.meine-klasse { ... }`, ID-Selektor: `#meine-id { ... }`",
       },
     ],
   },
@@ -1654,63 +1676,68 @@ const modulesObj = [
       {
         id: "task1",
         title: "HTML Grundgerüst bauen",
-        description: "Erstelle eine HTML-Seite mit Überschrift und Text.",
+        description: "Baue ein Grundgerüst für eine Webseite mit HTML.",
         difficulty: "Einfach",
       },
       {
         id: "task2",
-        title: "CSS anwenden",
-        description: "Style deine HTML-Seite mit Farbe und Schrift.",
+        title: "HTML Listen",
+        description:
+          "Erstelle eine geordnete und eine ungeordnete Liste in HTML.",
         difficulty: "Einfach",
       },
       {
         id: "task3",
-        title: "HTML Listen erstellen",
-        description: "Füge eine ungeordnete Liste zu deiner Seite hinzu.",
+        title: "HTML Tabellen",
+        description:
+          "Stelle tabellarische Daten mit dem `<table>`-Element dar.",
         difficulty: "Einfach",
       },
       {
         id: "task4",
-        title: "HTML Bilder einfügen",
-        description: "Zeige ein Bild auf deiner Webseite an.",
+        title: "HTML Formulare",
+        description:
+          "Erstelle ein einfaches Formular mit Eingabefeldern und einem Button.",
         difficulty: "Einfach",
       },
       {
         id: "task5",
-        title: "HTML Links erstellen",
-        description: "Erstelle einen Hyperlink zu einer anderen Seite.",
+        title: "Bilder einfügen",
+        description:
+          "Füge ein Bild mit dem `<img>`-Tag in deine HTML-Seite ein.",
         difficulty: "Einfach",
       },
       {
         id: "task6",
-        title: "CSS Selektoren",
-        description:
-          "Wende Stile auf Elemente über Klassen- und ID-Selektoren an.",
+        title: "Links erstellen",
+        description: "Verlinke zu einer anderen Webseite mit dem `<a>`-Tag.",
         difficulty: "Einfach",
       },
       {
         id: "task7",
-        title: "CSS Box Model",
-        description: "Experimentiere mit Padding und Margin für ein Element.",
-        difficulty: "Einfach",
-      },
-      {
-        id: "task8",
-        title: "Einfache JavaScript Funktion",
-        description: "Schreibe eine Funktion, die eine Alert-Box anzeigt.",
+        title: "Semantisches HTML",
+        description:
+          "Strukturiere deine Seite mit `<header>`, `<nav>` und `<footer>`.",
         difficulty: "Mittel",
       },
       {
+        id: "task8",
+        title: "HTML Kommentare",
+        description: "Füge Kommentare zu deinem HTML-Code hinzu.",
+        difficulty: "Einfach",
+      },
+      {
         id: "task9",
-        title: "JavaScript einbinden",
+        title: "HTML Attribute",
         description:
-          "Binde dein JavaScript über das `<script>`-Tag in HTML ein.",
+          "Verwende `class`- und `id`-Attribute zur Identifizierung von Elementen.",
         difficulty: "Mittel",
       },
       {
         id: "task10",
-        title: "Entwicklertools nutzen",
-        description: "Inspiziere HTML-Elemente und CSS-Regeln im Browser.",
+        title: "Grundlegende CSS Selektoren",
+        description:
+          "Style Elemente basierend auf ihrem Tag-Namen, ihrer Klasse oder ID.",
         difficulty: "Mittel",
       },
     ],

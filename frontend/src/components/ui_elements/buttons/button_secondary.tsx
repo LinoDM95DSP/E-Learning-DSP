@@ -1,12 +1,14 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, HoverHandlers } from "framer-motion";
 
-interface ButtonSecondaryProps {
+interface ButtonSecondaryProps extends HoverHandlers {
   title: string;
   icon?: React.ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   classNameButton?: string;
   classNameIcon?: string;
+  disabled?: boolean;
+  iconPosition?: "left" | "right";
 }
 
 const ButtonSecondary: React.FC<ButtonSecondaryProps> = ({
@@ -15,6 +17,10 @@ const ButtonSecondary: React.FC<ButtonSecondaryProps> = ({
   onClick,
   classNameButton = "",
   classNameIcon = "",
+  disabled,
+  iconPosition = "right",
+  onHoverStart,
+  onHoverEnd,
 }) => {
   const buttonVariants = {
     initial: { scale: 1 },
@@ -26,15 +32,22 @@ const ButtonSecondary: React.FC<ButtonSecondaryProps> = ({
     hover: { x: 6 },
   };
 
+  const iconPositionClass = iconPosition === "left" ? "flex-row-reverse" : "";
+
   return (
     <motion.button
       onClick={onClick}
+      disabled={disabled}
+      onHoverStart={onHoverStart}
+      onHoverEnd={onHoverEnd}
       className={`flex items-center space-x-2 rounded-lg  py-2 px-4 border-2 border-dsp-orange p-2
        hover:cursor-pointer focus:outline-none hover:font-bold
-        ${classNameButton}`}
+        ${iconPositionClass} ${classNameButton} ${
+        disabled ? "opacity-50 cursor-not-allowed" : ""
+      }`}
       variants={buttonVariants}
       initial="initial"
-      whileHover="hover"
+      whileTap="tap"
     >
       {title && <p className="text-sm md:text-base ">{title}</p>}
       {icon && (

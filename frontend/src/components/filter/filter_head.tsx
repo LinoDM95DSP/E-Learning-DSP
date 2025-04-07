@@ -1,9 +1,10 @@
 import React from "react";
-import type { DifficultyLevel } from "./tags/tag_difficulty";
+import type { DifficultyLevel } from "../tags/tag_difficulty";
 import { IoSearch } from "react-icons/io5";
 
 interface FilterHeadProps {
   title: string;
+  subtitle?: string;
   searchTerm: string;
   activeDifficultyFilters: DifficultyLevel[];
   onSearchChange: (term: string) => void;
@@ -13,6 +14,7 @@ interface FilterHeadProps {
 
 const FilterHead: React.FC<FilterHeadProps> = ({
   title,
+  subtitle,
   searchTerm,
   activeDifficultyFilters,
   onSearchChange,
@@ -24,9 +26,14 @@ const FilterHead: React.FC<FilterHeadProps> = ({
       {" "}
       {/* Container für alles */}
       {/* Obere Zeile: Titel vs. Schwierigkeitsfilter */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-5xl font-bold">{title}</h1>
-        <div className="flex gap-3">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">{title}</h1>
+          {subtitle && (
+            <p className="mt-1 text-base text-gray-600">{subtitle}</p>
+          )}
+        </div>
+        <div className="flex gap-3 flex-shrink-0">
           {availableDifficulties.map((level) => (
             <button
               key={level}

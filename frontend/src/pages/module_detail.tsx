@@ -2,10 +2,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperClass } from "swiper";
-import "swiper/css";
+import "swiper/swiper-bundle.css";
 import TagDifficulty from "../components/tags/tag_difficulty";
 import type { DifficultyLevel } from "../components/tags/tag_difficulty";
 import { TbTriangleInvertedFilled } from "react-icons/tb";
+import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 
 import modulesObj from "../util/modules/modules_object";
 import LearningContentVideoLayout from "../components/layouts/learning_content_video";
@@ -52,11 +53,29 @@ function ModuleDetail() {
     }
   };
 
+  // --- Breadcrumb Items ---
+  const breadcrumbItems = [
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Module", path: "/modules" },
+    { label: module.title }, // Aktuelles Modul
+  ];
+
   return (
-    <div className="max-w-screen-xl mx-auto flex flex-col gap-6">
-      <div className="flex justify-between mb-6">
-        <h1 className="text-2xl font-bold">{module.title}</h1>
-        <div className="flex gap-3">
+    <div className="p-6 flex flex-col">
+      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
+
+      {/* Kombinierter Container für Titel, Subtitel und Buttons */}
+      <div className="flex justify-between items-start mb-6">
+        {/* Linke Seite: Titel und Subtitel */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">{module.title}</h1>
+          <p className="text-base text-gray-600 mt-1">
+            Vertiefe dein Wissen mit Videos, Texten und Aufgaben.
+          </p>
+        </div>
+
+        {/* Rechte Seite: Buttons */}
+        <div className="flex gap-3 flex-shrink-0">
           <ButtonSwipe
             onClick={handlePrev}
             icon={<TbTriangleInvertedFilled />}
@@ -69,6 +88,7 @@ function ModuleDetail() {
           />
         </div>
       </div>
+
       {/* Spalte 1 */}
       <div className="flex gap-6">
         <div className="w-2/3 max-w-full overflow-hidden">
@@ -88,6 +108,7 @@ function ModuleDetail() {
                       progress={moduleProgress}
                       currentLessonIndex={index}
                       totalLessons={totalLessons}
+                      tasks={tasks as Task[]}
                     />
                   </SwiperSlide>
                 ))}
@@ -98,6 +119,7 @@ function ModuleDetail() {
                 progress={moduleProgress}
                 currentLessonIndex={0}
                 totalLessons={totalLessons}
+                tasks={tasks as Task[]}
               />
             )}
           </div>
@@ -136,6 +158,14 @@ function ModuleDetail() {
       </div>
     </div>
   );
+}
+
+// Wichtig: Task-Typ muss hier ebenfalls verfügbar sein oder importiert werden
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: DifficultyLevel;
 }
 
 export default ModuleDetail;
