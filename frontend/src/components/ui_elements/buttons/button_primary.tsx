@@ -36,10 +36,12 @@ const ButtonPrimary: React.FC<ButtonPrimaryProps> = ({
       initial="initial"
       whileHover="hover"
     >
-      {title && <p className="text-sm md:text-base ">{title}</p>}
+      {title && (
+        <p className="text-sm md:text-base text-white font-bold">{title}</p>
+      )}
       {icon && (
         <motion.span
-          className={classNameIcon}
+          className={`${classNameIcon} text-white`}
           variants={iconVariants}
           transition={{ type: "spring", stiffness: 500 }}
         >
