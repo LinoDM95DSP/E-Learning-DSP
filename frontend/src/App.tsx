@@ -7,6 +7,7 @@ import TaskDetails from "./pages/task_detail.tsx";
 import FinalExam from "./pages/final_exam";
 import Statistics from "./pages/statistics";
 import LandingPage from "./pages/landing_page";
+import UserSettings from "./pages/user_settings";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ReactNode } from "react";
@@ -62,6 +63,7 @@ function App() {
               />
               <Route path="/final-exam" element={<FinalExam />} />
               <Route path="/user-stats" element={<Statistics />} />
+              <Route path="/settings" element={<UserSettings />} />
             </Routes>
           </div>
         </main>

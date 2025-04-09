@@ -29,7 +29,7 @@ const BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
 // Extend fetch options with an optional 'query' property for URL query parameters.
 interface RequestOptions extends RequestInit {
-  query?: Record<string, any>;
+  query?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -57,11 +57,15 @@ async function request<T>(
   let url = BASE_URL + endpoint;
   console.log("url:", url);
   if (options.query) {
-    url += `?${new URLSearchParams(options.query).toString()}`;
+    const params = new URLSearchParams();
+    Object.entries(options.query).forEach(([key, value]) => {
+      params.append(key, String(value));
+    });
+    url += `?${params.toString()}`;
   }
 
-  // Remove 'query' before passing options to fetch.
-  const { query, ...init } = options;
+  // Remove 'query' property from options before passing to fetch
+  const { query: _, ...init } = options;
 
   const response = await fetch(url, { ...init, headers });
   if (!response.ok) {
@@ -80,14 +84,14 @@ export const api = {
   get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return request<T>(endpoint, { ...options, method: "GET" });
   },
-  post<T>(endpoint: string, data: any, options?: RequestOptions): Promise<T> {
+  post<T>(endpoint: string, data: Record<string, unknown>, options?: RequestOptions): Promise<T> {
     return request<T>(endpoint, {
       ...options,
       method: "POST",
       body: JSON.stringify(data),
     });
   },
-  put<T>(endpoint: string, data: any, options?: RequestOptions): Promise<T> {
+  put<T>(endpoint: string, data: Record<string, unknown>, options?: RequestOptions): Promise<T> {
     return request<T>(endpoint, {
       ...options,
       method: "PUT",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { motion, useMotionValue, useTransform } from "framer-motion"; // Importiere von framer-motion
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
 import LogoDSP from "../assets/dsp_no_background.png"; // Importiere das Logo
@@ -13,6 +14,7 @@ import {
   IoPlayCircleOutline,
   IoCheckmarkCircleOutline,
   IoPersonCircleOutline,
+  IoClose,
 } from "react-icons/io5";
 
 // Hilfskomponente für animierte Abschnitte
@@ -67,50 +69,84 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
 function LandingPage() {
   // State für Parallax-Effekt
   const [scrollY, setScrollY] = useState(0);
+  // State für das Video-Modal
+  const [isVideoModalOpen, setVideoModalOpen] = useState(false);
 
-  // Effekt zum Aktualisieren der Scroll-Position
+  // Motion Values für Mausposition
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Transformationen für Parallax-Effekt der Kreise
+  // Der Wert (z.B. 10, -15) bestimmt die Stärke und Richtung des Effekts
+  const circle1X = useTransform(mouseX, (val) => val / 10);
+  const circle1Y = useTransform(mouseY, (val) => val / 10);
+  const circle2X = useTransform(mouseX, (val) => val / -15);
+  const circle2Y = useTransform(mouseY, (val) => val / -15);
+  const circle3X = useTransform(mouseX, (val) => val / 20);
+  const circle3Y = useTransform(mouseY, (val) => val / -8);
+
+  // Effekt zum Aktualisieren der Scroll-Position und Mausposition
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
     };
+    const handleMouseMove = (event: MouseEvent) => {
+      // Setze die Motion Values relativ zur Fenstergröße
+      mouseX.set(event.clientX - window.innerWidth / 2);
+      mouseY.set(event.clientY - window.innerHeight / 2);
+    };
 
     // Listener hinzufügen
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("mousemove", handleMouseMove);
 
     // Cleanup-Funktion
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []); // Leeres Abhängigkeitsarray, damit der Effekt nur einmal registriert wird
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [mouseX, mouseY]); // Abhängigkeiten hinzufügen
 
   return (
     <div className="bg-gradient-to-b from-white to-gray-50 overflow-x-hidden mx-[-80px] my-[-40px]">
-      {/* Hero Section - mit Parallax */}
+      {/* Hero Section - mit Parallax und Maus-Effekten */}
       <section className="relative overflow-hidden p-6 pt-20 pb-20 flex flex-col items-center justify-center text-center min-h-screen">
-        {/* Parallax Hintergrund-Element */}
-        <div
-          className="absolute inset-x-0 top-0 h-[150%] z-0 bg-gradient-to-br from-orange-100 via-white to-blue-100 opacity-75"
+        {/* Parallax Hintergrund-Element mit Punktmuster */}
+        <motion.div
+          className="absolute inset-x-0 top-0 h-[150%] z-0"
           style={{
-            transform: `translateY(${scrollY * 0.4}px)`,
-            // Optional: Hier background-image für ein Muster/Grafik setzen
-            // backgroundImage: 'url(/path/to/your/data-pattern.svg)',
-            // backgroundSize: 'cover',
-            // backgroundPosition: 'center',
+            // Nur der lineare Gradient bleibt übrig
+            backgroundImage: `linear-gradient(to bottom right, #FFF7ED, white, #EFF6FF)`,
+            backgroundSize: "100% 100%", // Nur noch Größe für den linearen Gradienten
+            // Bestehender Parallax-Effekt für Scroll
+            y: scrollY * 0.4,
           }}
         />
 
-        {/* Hero-Inhalt (muss über dem Hintergrund liegen) */}
-        <div className="relative z-10">
+        {/* Animierte Kreise */}
+        <motion.div
+          className="absolute top-[15%] left-[10%] w-32 h-32 bg-dsp-orange/30 rounded-full filter blur-xl opacity-70 z-0"
+          style={{ x: circle1X, y: circle1Y }}
+        />
+        <motion.div
+          className="absolute bottom-[20%] right-[15%] w-48 h-48 bg-blue-200/40 rounded-full filter blur-2xl opacity-60 z-0"
+          style={{ x: circle2X, y: circle2Y }}
+        />
+        <motion.div
+          className="absolute top-[40%] right-[30%] w-24 h-24 bg-orange-200/50 rounded-full filter blur-lg opacity-70 z-0"
+          style={{ x: circle3X, y: circle3Y }}
+        />
+
+        {/* Hero-Inhalt (muss über dem Hintergrund und den Kreisen liegen) */}
+        <div className="relative z-20">
           {" "}
           {/* z-10 stellt sicher, dass der Inhalt über dem Parallax-Div liegt */}
           <AnimatedSection>
-            <img
-              src={LogoDSP}
-              alt="DataSmart Logo"
-              className="h-24 mb-8 mx-auto"
-            />
+            <img src={LogoDSP} alt="DataSmart Logo" className="mb-8 mx-auto" />
           </AnimatedSection>
           <AnimatedSection delay="delay-100">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-              Willkommen bei DataSmart Learning!
+              Willkommen bei DataSmart E-Learning!
             </h1>
           </AnimatedSection>
           <AnimatedSection delay="delay-200">
@@ -135,6 +171,39 @@ function LandingPage() {
                   classNameButton="w-full sm:w-auto"
                 />
               </Link>
+            </div>
+          </AnimatedSection>
+          {/* Video Preview Section */}
+          <AnimatedSection
+            delay="delay-400"
+            className="mt-16 w-full max-w-3xl mx-auto"
+          >
+            <div className="relative rounded-xl shadow-2xl overflow-hidden group">
+              {/* Blurred Background Image */}
+              <img
+                src={LogoDSP} // Platzhalter - ersetzen durch relevantes Vorschaubild
+                alt="Video Vorschau"
+                className="w-full h-auto object-cover filter blur-md scale-105"
+              />
+
+              {/* Overlay und Play Button */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <button
+                  onClick={() => setVideoModalOpen(true)} // Öffnet das Modal
+                  className="relative flex items-center justify-center w-20 h-20 bg-white/80 rounded-full shadow-xl backdrop-blur-sm group-hover:bg-white transition-colors duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 cursor-pointer"
+                  aria-label="Video abspielen"
+                >
+                  {/* Pulsierender Hintergrund */}
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping"></span>
+                  {/* Play Icon */}
+                  <IoPlayCircleOutline className="relative w-16 h-16 text-dsp-orange z-10" />
+                </button>
+              </div>
+
+              {/* Dekorative Kreise */}
+              <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg opacity-80 hidden md:block"></div>
+              <div className="absolute -right-4 -top-4 w-12 h-12 bg-orange-100 rounded-full shadow-lg opacity-70 hidden md:block"></div>
+              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-lg opacity-80 hidden md:block"></div>
             </div>
           </AnimatedSection>
         </div>
@@ -314,6 +383,36 @@ function LandingPage() {
         vorbehalten.
         {/* Optional: Links zu Impressum, Datenschutz */}
       </footer>
+
+      {/* Video Modal */}
+      {isVideoModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setVideoModalOpen(false)} // Schließt Modal bei Klick auf Hintergrund
+        >
+          <div
+            className="relative bg-white p-2 rounded-lg shadow-xl w-full max-w-4xl aspect-video"
+            onClick={(e) => e.stopPropagation()} // Verhindert Schließen bei Klick im Modal
+          >
+            <button
+              onClick={() => setVideoModalOpen(false)}
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-gray-700 text-white rounded-full flex items-center justify-center hover:bg-gray-900 transition-colors"
+              aria-label="Modal schließen"
+            >
+              <IoClose size={20} />
+            </button>
+            <iframe
+              className="w-full h-full rounded"
+              src="https://www.youtube.com/embed/r-uOLxNrNk8?autoplay=1" // Aktualisierte, verfügbare Data Analysis Video URL mit Autoplay
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
