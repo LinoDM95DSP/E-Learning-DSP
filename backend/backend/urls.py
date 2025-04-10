@@ -16,9 +16,29 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView, # Optional: zum Überprüfen eines Tokens
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('users/', include('users.urls')),
-    path('code_editor/', include('code_editor.urls')),
+    # API Endpunkte für deine Apps
+    path('api/modules/', include('modules.urls')),
+    path('api/users/', include('users.urls')),
+
+    # JWT Token Endpunkte
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), # Zum Anmelden (POST mit username/password)
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   # Zum Erneuern des Access Tokens (POST mit refresh)
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),     # Optional: Zum Prüfen ob Access Token gültig ist (POST mit token)
+
+    # Hier könnten noch weitere Pfade für z.B. Passwort Reset, etc. folgen
 ]
+
+# Konfiguration für static/media files im Development (falls noch nicht vorhanden)
+# from django.conf import settings
+# from django.conf.urls.static import static
+# if settings.DEBUG:
+#     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+#     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
@@ -8,13 +9,10 @@ import {
   IoCalendarOutline,
   IoFlagOutline,
   IoWarningOutline,
-  IoCloudUploadOutline,
   IoCheckmarkDoneOutline,
-  IoSchoolOutline,
-  IoAnalyticsOutline,
   IoCloseOutline,
 } from "react-icons/io5";
-import { BsSpeedometer2 } from "react-icons/bs"; // Reuse for difficulty
+import ComingSoonOverlay from "../components/messages/coming_soon_overlay";
 
 type TabState = "verfügbar" | "inBearbeitung" | "abgeschlossen";
 
@@ -184,6 +182,7 @@ function FinalExam() {
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionComment, setSubmissionComment] = useState("");
+  const navigate = useNavigate();
 
   // --- Breadcrumb Items ---
   const breadcrumbItems = [
@@ -240,158 +239,115 @@ function FinalExam() {
   );
 
   const renderAvailableExams = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {availableExamsPlaceholder.map((exam) => (
         <div
           key={exam.id}
-          className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col"
+          className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col"
         >
-          <h3 className="text-lg font-semibold mb-2 text-gray-800">
-            {exam.title}
-          </h3>
-          <p className="text-sm text-gray-600 mb-4 flex-grow">
-            {exam.description}
-          </p>
-          <div className="space-y-2 text-sm text-gray-500 mb-6">
-            <div className="flex items-center gap-2">
-              <IoTimeOutline className="text-dsp-orange" /> Dauer:{" "}
-              {exam.duration}
+          <div className="p-6 flex-grow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-800 leading-tight">
+                {exam.title}
+              </h3>
+              <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                {exam.difficulty}
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <BsSpeedometer2 className="text-dsp-orange" /> Schwierigkeit:{" "}
-              {exam.difficulty}
+            <p className="text-sm text-gray-600 mb-4 flex-grow">
+              {exam.description}
+            </p>
+            <div className="flex items-center text-sm text-gray-500 mb-2">
+              <IoTimeOutline className="mr-2" /> {exam.duration}
             </div>
-            <div className="flex items-center gap-2">
-              <IoStarOutline className="text-dsp-orange" /> Punkte:{" "}
-              {exam.points}
+            <div className="flex items-center text-sm text-gray-500">
+              <IoStarOutline className="mr-2" /> {exam.points} Punkte
             </div>
           </div>
-          <ButtonPrimary
-            title="Prüfung starten"
-            classNameButton="w-full justify-center"
-            onClick={() => {
-              console.log("Start Exam:", exam.id);
-            }}
-          />
+          <div className="bg-gray-50 p-4 border-t border-gray-200">
+            <ButtonPrimary
+              title="Prüfung starten"
+              classNameButton="w-full text-sm"
+              onClick={() => {
+                console.log(`Starting exam ${exam.id}`);
+                setIsSubmitting(true);
+              }}
+            />
+          </div>
         </div>
       ))}
     </div>
   );
 
   const renderInProgressExams = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Prüfungskarten Container (ohne Scrollen) */}
-      <div className="lg:col-span-2 space-y-6">
-        {inProgressExamsPlaceholder.map((exam) => (
-          <div
-            key={exam.id}
-            className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col"
-          >
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              {exam.title}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4 flex-grow">
-              {exam.description}
-            </p>
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-500 mb-4 border-t border-b border-gray-200 py-4">
-              <div className="flex items-center gap-2">
-                <IoCalendarOutline className="text-dsp-orange" /> Gestartet am:
-                <br />
-                {exam.started}
+    <div className="space-y-6">
+      {inProgressExamsPlaceholder.map((exam) => (
+        <div
+          key={exam.id}
+          className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200"
+        >
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                  {exam.title}
+                </h3>
+                <p className="text-sm text-gray-600">{exam.description}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <IoFlagOutline className="text-dsp-orange" /> Abgabefrist:
-                <br />
-                {exam.deadline}
+              <div className="mt-3 sm:mt-0 sm:ml-4 text-sm text-gray-500 flex-shrink-0">
+                <div className="flex items-center mb-1">
+                  <IoCalendarOutline className="mr-2" /> Gestartet:{" "}
+                  {exam.started}
+                </div>
+                <div className="flex items-center text-red-600 font-medium">
+                  <IoFlagOutline className="mr-2" /> Deadline: {exam.deadline}
+                </div>
               </div>
             </div>
-            <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 p-3 rounded-md text-sm mb-4 flex items-center gap-2">
-              <IoWarningOutline /> Verbleibende Zeit:{" "}
-              <span className="font-semibold">{exam.remainingTime}</span>
-            </div>
-            <div className="mb-6">
-              <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium text-gray-700">
-                  Fortschritt
-                </span>
-                <span className="text-sm font-medium text-gray-700">
-                  {exam.progress}%
-                </span>
+
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Fortschritt</span>
+                <span>{exam.progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-dsp-orange h-2.5 rounded-full transition-width duration-300 ease-in-out"
+                  className="bg-dsp-green h-2 rounded-full"
                   style={{ width: `${exam.progress}%` }}
                 ></div>
               </div>
+              <div className="text-right text-sm text-gray-500 mt-1">
+                <IoTimeOutline className="inline mr-1" /> Verbleibend:{" "}
+                {exam.remainingTime}
+              </div>
             </div>
-            <ButtonPrimary
-              title="Prüfung abgeben"
-              classNameButton="w-full justify-center mt-auto"
-              onClick={() => {
-                setIsSubmitting(true);
-                setSubmissionComment("");
-              }}
-            />
-          </div>
-        ))}
-      </div>
 
-      {/* Rechte Spalte für Upload und Hinweise */}
-      {!isSubmitting && (
-        <div className="lg:col-span-1 space-y-6">
-          {/* Datei Upload - self-start entfernt, da es jetzt in einem eigenen space-y Container ist */}
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col items-center justify-center">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800 self-start">
-              Dateien hochladen
-            </h3>
-            <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center mb-4">
-              <IoCloudUploadOutline size={48} className="text-gray-400 mb-3" />
-              <p className="text-sm text-gray-600 mb-1">
-                Ziehe Dateien hierher oder klicke zum Auswählen
-              </p>
-              <p className="text-xs text-gray-500">
-                Unterstützte Formate: PDF, DOCX, XLSX, PPTX, CSV, PY, IPYNB,
-                etc.
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <ButtonPrimary
+                title="Bearbeitung fortsetzen"
+                classNameButton="w-full sm:w-auto text-sm"
+                onClick={() => console.log(`Resuming exam ${exam.id}`)}
+              />
               <ButtonSecondary
-                title="Dateien auswählen"
-                classNameButton="text-sm"
+                title="Abgabe vorbereiten"
+                classNameButton="w-full sm:w-auto text-sm"
                 onClick={() => {
-                  console.log("Select Files");
+                  console.log(`Preparing submission for ${exam.id}`);
+                  setIsSubmitting(true);
                 }}
               />
-              <span className="text-sm text-gray-500">Keine ausgewählt</span>
+              <ButtonSecondary
+                icon={<IoWarningOutline />}
+                title="Abbrechen (Achtung!) "
+                classNameButton="w-full sm:w-auto text-sm text-red-600 border-red-300 hover:bg-red-50"
+                onClick={() =>
+                  console.log(`Potentially cancelling exam ${exam.id}`)
+                }
+              />
             </div>
           </div>
-
-          {/* NEU: Hinweise & Regeln */}
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
-            <h3 className="text-lg font-semibold mb-3 text-gray-800">
-              Hinweise & Regeln zur Abgabe
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
-              <li>
-                Bitte laden Sie alle relevanten Dateien als ZIP-Archiv hoch.
-              </li>
-              <li>
-                Stellen Sie sicher, dass Ihr Code kommentiert und
-                nachvollziehbar ist.
-              </li>
-              <li>
-                Die Abgabefrist ist bindend. Verspätete Abgaben werden nicht
-                berücksichtigt.
-              </li>
-              <li>
-                Bei technischen Problemen kontaktieren Sie umgehend den Support.
-              </li>
-              <li>Plagiate führen zur sofortigen Disqualifikation.</li>
-            </ul>
-          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 
@@ -401,221 +357,194 @@ function FinalExam() {
 
   const renderCompletedExams = () => (
     <div className="space-y-4">
-      {completedExamsPlaceholder.map((exam) => {
-        const isExpanded = expandedDetails[exam.id];
-        return (
+      {completedExamsPlaceholder.map((exam) => (
+        <div
+          key={exam.id}
+          className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+        >
           <div
-            key={exam.id}
-            className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm"
+            className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => toggleDetails(exam.id)}
           >
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">
-              {exam.title}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">{exam.description}</p>
-            <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
-              <div className="flex items-start gap-2 text-gray-600">
-                <IoCheckmarkDoneOutline
-                  size={20}
-                  className="text-green-600 flex-shrink-0"
-                />
-                <div>
-                  Abgeschlossen am:
-                  <br />
-                  {exam.completedDate}
-                </div>
-              </div>
-              <div className="flex items-start gap-2 text-gray-600">
-                <IoSchoolOutline
-                  size={20}
-                  className="text-blue-600 flex-shrink-0"
-                />
-                <div>
-                  Bewertung:
-                  <br />
-                  {exam.score}
-                </div>
-              </div>
+            <div className="mb-3 sm:mb-0">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {exam.title}
+              </h3>
+              <p className="text-sm text-gray-500">{exam.description}</p>
             </div>
-
-            <div
-              className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-                <h4 className="text-md font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <IoAnalyticsOutline /> Prüfungsdetails
-                </h4>
-                <div className="text-sm text-gray-600 space-y-1">
-                  {exam.details && (
-                    <>
-                      <p>
-                        <strong>Bearbeitungszeit:</strong>{" "}
-                        {exam.details.processingTime} (Erlaubt:{" "}
-                        {exam.details.allowedTime})
-                      </p>
-                      <p>
-                        <strong>Abgabezeitpunkt:</strong>{" "}
-                        {exam.details.submissionTime}
-                      </p>
-                      <div>
-                        <strong>Punkte nach Kategorie:</strong>
-                        <ul className="list-disc list-inside ml-4 mt-1">
-                          {exam.details.pointsByCategory.map((p) => (
-                            <li key={p.category}>
-                              {p.category}: {p.points}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <p>
-                        <strong>Vergleich zum Durchschnitt:</strong>{" "}
-                        {exam.details.comparisonToAverage}
-                      </p>
-                    </>
-                  )}
-                </div>
+            <div className="flex items-center space-x-4 flex-shrink-0">
+              <div className="flex items-center text-sm text-gray-600">
+                <IoCheckmarkDoneOutline className="mr-1 text-green-600" />
+                Abgeschlossen: {exam.completedDate}
               </div>
+              <div className="text-lg font-semibold text-dsp-blue">
+                {exam.score}
+              </div>
+              <svg
+                className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
+                  expandedDetails[exam.id] ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
             </div>
-
-            <ButtonSecondary
-              title={isExpanded ? "Weniger anzeigen" : "Details anzeigen"}
-              classNameButton="w-full justify-center mt-4"
-              onClick={() => toggleDetails(exam.id)}
-            />
           </div>
-        );
-      })}
+
+          {/* Expanded Details Section */}
+          {expandedDetails[exam.id] && (
+            <div className="border-t border-gray-200 bg-gray-50/50 p-4 sm:p-6">
+              <h4 className="text-md font-semibold text-gray-700 mb-3">
+                Detailübersicht
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
+                  <div className="font-medium text-gray-500 mb-1">
+                    Bearbeitungszeit
+                  </div>
+                  <div className="text-gray-800">
+                    {exam.details.processingTime} (Erlaubt:{" "}
+                    {exam.details.allowedTime})
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
+                  <div className="font-medium text-gray-500 mb-1">
+                    Abgabezeitpunkt
+                  </div>
+                  <div className="text-gray-800">
+                    {exam.details.submissionTime}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
+                  <div className="font-medium text-gray-500 mb-1">
+                    Vergleich zum Durchschnitt
+                  </div>
+                  <div
+                    className={`font-semibold ${
+                      exam.details.comparisonToAverage.startsWith("+")
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {exam.details.comparisonToAverage}
+                  </div>
+                </div>
+              </div>
+              <h4 className="text-md font-semibold text-gray-700 mt-4 mb-3">
+                Punkte nach Kategorie
+              </h4>
+              <div className="space-y-2">
+                {exam.details.pointsByCategory.map((cat, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center bg-white p-2 rounded border border-gray-100 shadow-sm text-sm"
+                  >
+                    <span className="text-gray-600">{cat.category}</span>
+                    <span className="font-medium text-gray-800">
+                      {cat.points}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end">
+                <ButtonSecondary
+                  title="Feedback anfordern"
+                  classNameButton="text-sm"
+                  onClick={() =>
+                    console.log(`Requesting feedback for ${exam.id}`)
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 
+  // --- Overlay Konfiguration ---
+  const expectedExamFeatures = [
+    "Automatisierte Bewertung mit direktem Feedback",
+    "Möglichkeit zur Einreichung von Code-Projekten",
+    "Offizielle Zertifikatsausstellung nach Bestehen",
+    "Detaillierte Analyse deiner Prüfungsleistung",
+  ];
+
+  // Handler für das Schließen des Overlays
+  const handleOverlayClose = () => {
+    console.log("Exam overlay closed, navigating to dashboard...");
+    navigate("/dashboard");
+  };
+
   return (
-    <div className="p-6 min-h-screen">
-      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
-      <h1 className="text-3xl font-bold text-gray-800">Abschlussprüfungen</h1>
-      <p className="text-base text-gray-600 mb-6">
-        Hier findest du alle verfügbaren Abschlussprüfungen und kannst deine
-        Prüfungsunterlagen hochladen.
-      </p>
+    <div className="p-6 min-h-screen relative">
+      <ComingSoonOverlay
+        daysUntilTarget={60}
+        expectedFeatures={expectedExamFeatures}
+        onClose={handleOverlayClose}
+      />
+      <div className="opacity-50 pointer-events-none">
+        <Breadcrumbs items={breadcrumbItems} className="mb-6" />
+        <h1 className="text-3xl font-bold text-gray-800">Abschlussprüfungen</h1>
+        <p className="text-base text-gray-600 mb-6">
+          Hier findest du alle verfügbaren Abschlussprüfungen und kannst deine
+          Prüfungsunterlagen hochladen.
+        </p>
 
-      {renderTabs()}
+        {renderTabs()}
 
-      <div className="mt-6">
-        {activeTab === "verfügbar" && renderAvailableExams()}
-        {activeTab === "inBearbeitung" && renderInProgressExams()}
-        {activeTab === "abgeschlossen" && renderCompletedExams()}
-      </div>
+        <div className="mt-6">
+          {activeTab === "verfügbar" && renderAvailableExams()}
+          {activeTab === "inBearbeitung" && renderInProgressExams()}
+          {activeTab === "abgeschlossen" && renderCompletedExams()}
+        </div>
 
-      {/* NEU: Popup für die Abgabe */}
-      {isSubmitting && (
-        // Overlay mit Transition für Opacity
-        <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out">
-          {/* Popup Container: max-h und overflow-y hinzugefügt */}
-          <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-3xl z-50 transition-all duration-300 ease-in-out transform scale-100 opacity-100 max-h-[90vh] overflow-y-auto">
-            {/* Schließen Button */}
-            <button
-              onClick={() => setIsSubmitting(false)}
-              className="absolute top-4 right-4 p-1 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Schließen"
-            >
-              <IoCloseOutline size={24} />
-            </button>
-
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Prüfung abgeben
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm flex flex-col items-center justify-center">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-800 self-start">
-                    Dateien hochladen
-                  </h3>
-                  <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center mb-4">
-                    <IoCloudUploadOutline
-                      size={48}
-                      className="text-gray-400 mb-3"
-                    />
-                    <p className="text-sm text-gray-600 mb-1">
-                      Ziehe Dateien hierher oder klicke zum Auswählen
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      PDF, DOCX, XLSX, etc.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <ButtonSecondary
-                      title="Dateien auswählen"
-                      classNameButton="text-sm"
-                      onClick={() => {
-                        console.log("Select Files in Popup");
-                      }}
-                    />
-                    <span className="text-sm text-gray-500">
-                      Keine ausgewählt
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="submissionComment"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Kommentar zur Abgabe (optional)
-                  </label>
-                  <textarea
-                    id="submissionComment"
-                    rows={4}
-                    className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-dsp-orange focus:border-dsp-orange sm:text-sm h-32"
-                    placeholder="Hier können Sie Anmerkungen für den Prüfer hinterlassen..."
-                    value={submissionComment}
-                    onChange={(e) => setSubmissionComment(e.target.value)}
-                  ></textarea>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 shadow-sm">
-                <h3 className="text-lg font-semibold mb-3 text-blue-800">
-                  Hinweise & Regeln zur Abgabe
-                </h3>
-                <ul className="space-y-2 text-sm text-blue-700 list-disc list-inside">
-                  <li>
-                    Bitte laden Sie alle relevanten Dateien als ZIP-Archiv hoch.
-                  </li>
-                  <li>
-                    Stellen Sie sicher, dass Ihr Code kommentiert und
-                    nachvollziehbar ist.
-                  </li>
-                  <li>
-                    Die Abgabefrist ist bindend. Verspätete Abgaben werden nicht
-                    berücksichtigt.
-                  </li>
-                  <li>
-                    Bei technischen Problemen kontaktieren Sie umgehend den
-                    Support.
-                  </li>
-                  <li>Plagiate führen zur sofortigen Disqualifikation.</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-8 pt-5 border-t border-gray-200 flex justify-end gap-3">
-              <ButtonSecondary
-                title="Abbrechen"
+        {isSubmitting && (
+          <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-4">
+            <div className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-3xl z-50 max-h-[90vh] overflow-y-auto">
+              <button
                 onClick={() => setIsSubmitting(false)}
-              />
-              <ButtonPrimary
-                title="Endgültig absenden"
-                onClick={() => {
-                  console.log("Submitting with comment:", submissionComment);
-                  setIsSubmitting(false);
-                }}
-              />
+                className="absolute top-4 right-4 p-1 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Schließen"
+              >
+                <IoCloseOutline size={24} />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Prüfung abgeben
+              </h2>
+              <div>
+                <label
+                  htmlFor="submissionCommentPopup"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Kommentar
+                </label>
+                <textarea
+                  id="submissionCommentPopup"
+                  rows={4}
+                  className="w-full p-2 border border-gray-300 rounded-md shadow-sm"
+                  value={submissionComment}
+                  onChange={(e) => setSubmissionComment(e.target.value)}
+                ></textarea>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <ButtonPrimary
+                  title="Absenden"
+                  onClick={() => setIsSubmitting(false)}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

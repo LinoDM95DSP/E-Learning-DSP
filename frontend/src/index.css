@@ -37,3 +37,7 @@ h6 {
   background: #ff863d; /* Farbe des Daumens */
   border-radius: 4px;
 }
+
+/* Regeln wurden in ComingSoonOverlaySmall.css verschoben */
+/* @keyframes spin-slow { ... } */
+/* .animate-spin-slow { ... } */

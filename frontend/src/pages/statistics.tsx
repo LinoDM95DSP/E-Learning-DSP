@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 import {
   IoCheckmarkCircleOutline,
@@ -6,15 +7,18 @@ import {
   IoTimeOutline,
   IoRibbonOutline,
   IoPeopleOutline,
+  IoStatsChartOutline,
 } from "react-icons/io5";
-// NEU: Echte Chart-Komponenten importieren
+import ComingSoonOverlay from "../components/messages/coming_soon_overlay";
+
+// Chart-Komponenten und Wrapper importieren
 import LearningTimeChart from "../components/charts/LearningTimeChart";
 import ProgressOverTimeChart from "../components/charts/ProgressOverTimeChart";
 import SkillDistributionChart from "../components/charts/SkillDistributionChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
 import ExercisePerformanceChart from "../components/charts/ExercisePerformanceChart";
 import ComparisonBar from "../components/charts/ComparisonBar";
-import LazyLoadChartWrapper from "../components/common/LazyLoadChartWrapper"; // NEU: Wrapper importieren
+import LazyLoadChartWrapper from "../components/common/LazyLoadChartWrapper";
 
 type TabState = "übersicht" | "fortschritt" | "leistung" | "vergleich";
 
@@ -80,7 +84,7 @@ const streakData = {
     "13.05",
     "14.05",
   ],
-}; // Beispielhafte Daten
+};
 
 const certificateProgressData = [
   { name: "Data Analyst", completed: 6, total: 8, progress: 75 },
@@ -126,7 +130,7 @@ const comparisonData = [
   { name: "Modulabschluss", average: 65, user: 85, maxValue: 100, unit: "%" },
   { name: "Gelöste Aufgaben", average: 42, user: 48, maxValue: 60, unit: "" },
   {
-    name: "Lernzeit (Stunden/Woche)",
+    name: "Lernzeit (Std./Woche)",
     average: 6.5,
     user: 7.2,
     maxValue: 10,
@@ -140,6 +144,7 @@ function Statistics() {
   const [activeTab, setActiveTab] = useState<TabState>("übersicht");
   const [sliderStyle, setSliderStyle] = useState({});
   const tabsRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const breadcrumbItems = [
     { label: "Dashboard", path: "/dashboard" },
@@ -149,7 +154,6 @@ function Statistics() {
   useEffect(() => {
     const container = tabsRef.current;
     if (!container) return;
-
     const activeButton = container.querySelector<HTMLButtonElement>(
       `[data-tab="${activeTab}"]`
     );
@@ -190,12 +194,12 @@ function Statistics() {
     </div>
   );
 
-  // --- Rendering-Funktionen für Tabs (mit Lazy Loading und chartProps) ---
+  // --- Rendering-Funktionen für Tabs ---
+
   const renderUebersicht = () => (
     <div className="space-y-8">
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Beispiel Stat Card */}
         <StatCard
           title="Abgeschlossene Module"
           value={overviewStats.modulesCompleted}
@@ -241,8 +245,6 @@ function Statistics() {
         </ChartCard>
         <ChartCard title="Modulabschluss" subtitle="Fortschritt in jedem Modul">
           <div className="space-y-2 pr-4">
-            {" "}
-            {/* Platz für Progress Bars */}
             {moduleProgressData.map((item) => (
               <div key={item.name}>
                 <div className="flex justify-between text-sm mb-1">
@@ -265,7 +267,7 @@ function Statistics() {
         >
           <LazyLoadChartWrapper
             component={SkillDistributionChart}
-            minHeight={300} // Pie chart hat ggf. mehr Höhe wegen Legende
+            minHeight={300}
             chartProps={{ data: skillDistributionData }}
           />
         </ChartCard>
@@ -289,7 +291,7 @@ function Statistics() {
                 className="w-8 h-8 flex items-center justify-center text-xs border border-gray-300 rounded bg-green-100 text-green-800"
               >
                 {date.split(".")[0]}
-              </span> // Beispiel für aktive Tage
+              </span>
             ))}
           </div>
         </ChartCard>
@@ -428,22 +430,42 @@ function Statistics() {
     </div>
   );
 
-  // --- Haupt-Return ---
+  // --- Overlay Konfiguration ---
+  const expectedStatsFeatures = [
+    "Interaktive Heatmap deiner Lernaktivität",
+    "Detaillierte Aufschlüsselung der Lerndauer pro Thema",
+    "Vergleich deiner Lerngeschwindigkeit mit dem Durchschnitt",
+    "Personalisierte Empfehlungen basierend auf deinen Daten",
+  ];
+
+  // Handler für das Schließen des Overlays
+  const handleOverlayClose = () => {
+    console.log("Stats overlay closed, navigating to dashboard...");
+    navigate("/dashboard");
+  };
+
   return (
-    <div className="p-6 min-h-screen">
-      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
-      <h1 className="text-3xl font-bold text-gray-800">Deine Statistik</h1>
-      <p className="text-base text-gray-600 mb-6">
-        Verfolge deinen Lernfortschritt und deine Leistungen.
-      </p>
-
-      {renderTabs()}
-
-      <div className="mt-6">
-        {activeTab === "übersicht" && renderUebersicht()}
-        {activeTab === "fortschritt" && renderFortschritt()}
-        {activeTab === "leistung" && renderLeistung()}
-        {activeTab === "vergleich" && renderVergleich()}
+    <div className="p-6 min-h-screen bg-gray-50 relative">
+      <ComingSoonOverlay
+        daysUntilTarget={60}
+        expectedFeatures={expectedStatsFeatures}
+        onClose={handleOverlayClose}
+      />
+      <div className="opacity-50 pointer-events-none">
+        <Breadcrumbs items={breadcrumbItems} className="mb-6" />
+        <h1 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-2">
+          <IoStatsChartOutline /> Deine Statistik
+        </h1>
+        <p className="text-base text-gray-600 mb-6">
+          Verfolge deinen Lernfortschritt und deine Leistungen.
+        </p>
+        {renderTabs()}
+        <div className="mt-6">
+          {activeTab === "übersicht" && renderUebersicht()}
+          {activeTab === "fortschritt" && renderFortschritt()}
+          {activeTab === "leistung" && renderLeistung()}
+          {activeTab === "vergleich" && renderVergleich()}
+        </div>
       </div>
     </div>
   );

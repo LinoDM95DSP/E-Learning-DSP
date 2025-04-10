@@ -1,6 +1,6 @@
 import React from "react";
 import RenderYoutubeVideo from "../videos/render_youtube_video";
-import type { Task } from "../tags/tag_calculated_difficulty";
+import { Task } from "../../context/ModuleContext";
 import { GoBook } from "react-icons/go";
 import { BsSpeedometer2 } from "react-icons/bs";
 import type { DifficultyLevel } from "../tags/tag_difficulty";
@@ -10,7 +10,6 @@ interface LearningContentVideoLayoutProps {
   title: string;
   description: string;
   supplementaryContent?: { label: string; url: string }[];
-  progress: number;
   currentLessonIndex: number;
   totalLessons: number;
   tasks?: Task[];
@@ -21,7 +20,6 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
   title,
   description,
   supplementaryContent,
-  progress,
   currentLessonIndex,
   totalLessons,
   tasks,
@@ -37,11 +35,22 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
       Mittel: 2,
       Schwer: 3,
     };
-    const totalDifficultyScore = localTasks.reduce(
-      (sum, task) => sum + (difficultyMap[task.difficulty] || 0),
-      0
-    );
-    const averageScore = totalDifficultyScore / localTasks.length;
+
+    let totalDifficultyScore = 0;
+    let validTaskCount = 0;
+
+    for (const task of localTasks) {
+      const difficulty = task.difficulty as DifficultyLevel;
+      if (difficulty in difficultyMap) {
+        totalDifficultyScore += difficultyMap[difficulty];
+        validTaskCount++;
+      }
+    }
+
+    if (validTaskCount === 0) return null;
+
+    const averageScore = totalDifficultyScore / validTaskCount;
+
     if (averageScore < 1.7) {
       return "Einfach";
     } else if (averageScore <= 2.3) {
@@ -52,6 +61,17 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
   };
 
   const calculatedDifficultyText = calculateAverageDifficulty(tasks);
+
+  const moduleTasks = tasks || [];
+  const totalTasksInModule = moduleTasks.length;
+  const completedTasksInModule = moduleTasks.filter(
+    (task) => task.completed
+  ).length;
+  const progressPercent =
+    totalTasksInModule > 0
+      ? (completedTasksInModule / totalTasksInModule) * 100
+      : 0;
+  const roundedProgress = Math.round(progressPercent);
 
   return (
     <div className="flex flex-col gap-7 justify-center items-center">
@@ -83,22 +103,24 @@ const LearningContentVideoLayout: React.FC<LearningContentVideoLayoutProps> = ({
             )}
           </div>
 
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">
-                Fortschritt
-              </span>
-              <span className="text-sm font-medium text-gray-700">
-                {progress}%
-              </span>
+          {totalTasksInModule > 0 && (
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700">
+                  Fortschritt ({completedTasksInModule}/{totalTasksInModule})
+                </span>
+                <span className="text-sm font-medium text-gray-700">
+                  {roundedProgress}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-dsp-orange h-2.5 rounded-full transition-width duration-300 ease-in-out"
+                  style={{ width: `${roundedProgress}%` }}
+                ></div>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="bg-dsp-orange h-2.5 rounded-full transition-width duration-300 ease-in-out"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
+          )}
         </div>
 
         <p className="">{description}</p>

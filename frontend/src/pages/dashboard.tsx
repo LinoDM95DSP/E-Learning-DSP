@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState /*, useEffect*/ } from "react";
 import { Link } from "react-router-dom";
-import modulesObj from "../util/modules/modules_object";
 import TagDifficulty from "../components/tags/tag_difficulty";
 import type { DifficultyLevel } from "../components/tags/tag_difficulty";
-// Importiere Icons
+import {
+  useModules,
+  Task as ContextTask /*, Content as ContextContent*/,
+} from "../context/ModuleContext";
 import {
   IoLibraryOutline,
   IoStatsChartOutline,
@@ -11,80 +13,107 @@ import {
   IoSchoolOutline,
   IoPlayCircleOutline,
   IoTimeOutline,
+  IoAlertCircleOutline,
 } from "react-icons/io5";
 import { BsSpeedometer2 } from "react-icons/bs";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
-
-// Definiere Typen (oder importiere zentral)
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: DifficultyLevel;
-  hint?: string;
-}
+import LoadingSpinner from "../components/ui_elements/loading_spinner";
+import ComingSoonOverlaySmall from "../components/messages/coming_soon_overlay_small";
 
 function Dashboard() {
-  // --- State für die Anzeige aller Module ---
-  const [showAllInProgress, setShowAllInProgress] = useState(false);
+  const { modules, loading, error, fetchModules } = useModules();
 
-  // --- Statistische Berechnungen (Benutzerunabhängig) ---
-  const totalModules = modulesObj.length;
+  const [showAllModules, setShowAllModules] = useState(false);
 
-  const allTasks: Task[] = modulesObj.flatMap((m) => (m.tasks || []) as Task[]);
+  if (loading) {
+    return (
+      <div className="p-6 min-h-screen flex items-center justify-center">
+        <LoadingSpinner message="Lade Dashboard Daten..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 min-h-screen flex flex-col items-center justify-center text-center">
+        <IoAlertCircleOutline className="text-5xl text-red-500 mb-4" />
+        <h2 className="text-xl font-semibold text-red-700 mb-2">
+          Fehler beim Laden des Dashboards
+        </h2>
+        <p className="text-gray-600 mb-4">
+          {error.message || "Es gab ein Problem beim Abrufen der Moduldaten."}
+        </p>
+        <button
+          onClick={() => fetchModules()}
+          className="px-4 py-2 bg-dsp-orange text-white rounded hover:bg-dsp-orange-dark transition-colors"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
+  }
+
+  const totalModules = modules.length;
+
+  const allTasks: ContextTask[] = modules.flatMap((m) => m.tasks || []);
   const totalTasks = allTasks.length;
   const averageTasksPerModule =
-    totalModules > 0 ? (totalTasks / totalModules).toFixed(1) : 0; // Berechne Ø Aufgaben
+    totalModules > 0 ? (totalTasks / totalModules).toFixed(1) : "0.0";
 
-  const totalLessons = modulesObj.reduce((sum, m) => {
-    const content = m.content;
-    return sum + (Array.isArray(content) ? content.length : content ? 1 : 0); // Zähle Lektionen
-  }, 0);
-
+  const totalLessons = modules.reduce(
+    (sum, m) => sum + (m.contents?.length || 0),
+    0
+  );
   const averageLessonsPerModule =
-    totalModules > 0 ? (totalLessons / totalModules).toFixed(1) : "0.0"; // NEU
+    totalModules > 0 ? (totalLessons / totalModules).toFixed(1) : "0.0";
 
   const tasksByDifficulty = allTasks.reduce((acc, task) => {
-    acc[task.difficulty] = (acc[task.difficulty] || 0) + 1;
+    const level = task.difficulty as DifficultyLevel;
+    if (level === "Einfach" || level === "Mittel" || level === "Schwer") {
+      acc[level] = (acc[level] || 0) + 1;
+    }
     return acc;
   }, {} as Record<DifficultyLevel, number>);
 
-  // Berechne durchschnittliche Schwierigkeit *pro Modul*
   const calculateModuleDifficulty = (
-    tasks?: Task[]
+    tasks?: ContextTask[]
   ): DifficultyLevel | null => {
     if (!tasks || tasks.length === 0) return null;
-    const difficultyMap: Record<DifficultyLevel, number> = {
+    const difficultyMap: Record<string, number> = {
       Einfach: 1,
       Mittel: 2,
       Schwer: 3,
     };
-    const totalDifficultyScore = tasks.reduce(
-      (sum, task) => sum + (difficultyMap[task.difficulty] || 0),
+    const validTasks = tasks.filter(
+      (task) => difficultyMap[task.difficulty] !== undefined
+    );
+    if (validTasks.length === 0) return null;
+
+    const totalDifficultyScore = validTasks.reduce(
+      (sum, task) => sum + difficultyMap[task.difficulty],
       0
     );
-    const averageScore = totalDifficultyScore / tasks.length;
+    const averageScore = totalDifficultyScore / validTasks.length;
+
     if (averageScore < 1.7) return "Einfach";
-    else if (averageScore <= 2.3) return "Mittel";
-    else return "Schwer";
+    if (averageScore <= 2.3) return "Mittel";
+    return "Schwer";
   };
 
-  const modulesByAvgDifficulty = modulesObj.reduce((acc, module) => {
-    const avgDifficulty = calculateModuleDifficulty(module.tasks as Task[]);
+  const modulesByAvgDifficulty = modules.reduce((acc, module) => {
+    const avgDifficulty = calculateModuleDifficulty(module.tasks);
     if (avgDifficulty) {
       acc[avgDifficulty] = (acc[avgDifficulty] || 0) + 1;
     }
     return acc;
   }, {} as Record<DifficultyLevel, number>);
 
-  // Module mit meisten/wenigsten Aufgaben finden (NEU)
   let maxTasks = -1,
     minTasks = Infinity;
   let modulesWithMostTasks: string[] = [];
   let modulesWithLeastTasks: string[] = [];
 
-  modulesObj.forEach((module) => {
+  modules.forEach((module) => {
     const taskCount = module.tasks?.length || 0;
     if (taskCount > maxTasks) {
       maxTasks = taskCount;
@@ -101,23 +130,10 @@ function Dashboard() {
   });
   if (minTasks === Infinity) minTasks = 0;
 
-  // --- Benutzerspezifische Berechnungen (angepasst auf Mock-Daten) ---
-  const inProgressModules = Object.values(modulesObj).filter((module) => {
-    // Verwende den Mock-Fortschritt aus modulesObj
-    // Annahme: progress ist eine Zahl 0-100
-    return (
-      module.progress !== undefined &&
-      module.progress > 0 &&
-      module.progress < 100
-    );
-  });
-
-  // Helper Funktion zum Extrahieren der YouTube Video ID
-  const getYouTubeVideoId = (url: string | undefined): string | null => {
+  const getYouTubeVideoId = (url: string | undefined | null): string | null => {
     if (!url) return null;
     try {
       const urlObj = new URL(url);
-      // Funktioniert für youtube.com/embed/ID und youtube.com/watch?v=ID
       if (
         urlObj.hostname.includes("youtube.com") ||
         urlObj.hostname.includes("youtu.be")
@@ -129,7 +145,6 @@ function Dashboard() {
           return urlObj.searchParams.get("v");
         }
       }
-      // Fallback für youtu.be/ID URLs
       if (urlObj.hostname === "youtu.be") {
         return urlObj.pathname.substring(1).split(/[?&]/)[0];
       }
@@ -140,26 +155,23 @@ function Dashboard() {
     return null;
   };
 
-  // --- Platzhalterdaten für Fristen ---
   const upcomingDeadlines = [
     {
       id: "deadline1",
       title: "Python Projekt einreichen",
       context: "Python Grundlagen",
-      dueDate: "15. Okt 2024", // Beispiel-Datum
+      dueDate: "15. Okt 2024",
     },
     {
       id: "deadline2",
       title: "Excel Abschlusstest",
       context: "Excel Fortgeschritten",
-      dueDate: "30. Okt 2024", // Beispiel-Datum
+      dueDate: "30. Okt 2024",
     },
   ];
 
-  // --- Breadcrumb Items ---
   const breadcrumbItems = [{ label: "Dashboard" }];
 
-  // --- JSX ---
   return (
     <div className="p-6 min-h-screen">
       <Breadcrumbs items={breadcrumbItems} className="mb-6" />
@@ -167,10 +179,9 @@ function Dashboard() {
       <p className="text-base text-gray-600 mb-6">
         Willkommen zurück! Hier ist dein Lernfortschritt.
       </p>
-      {/* Grid für Statistik-Karten */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
-          title="Module Gesamt"
+          title="Meine Module"
           value={totalModules}
           icon={<IoLibraryOutline size={24} className="text-dsp-orange" />}
           accentColor="bg-dsp-orange_light"
@@ -199,11 +210,8 @@ function Dashboard() {
           accentColor="bg-dsp-orange_light"
         />
       </div>
-      {/* Grid für weitere Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Module nach Schwierigkeit */}
         <div className="lg:col-span-1 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          {/* Angepasster Titelbereich */}
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 rounded-full bg-dsp-orange_light">
               <BsSpeedometer2 size={20} className="text-dsp-orange" />
@@ -228,16 +236,14 @@ function Dashboard() {
                 )
             )}
             {Object.keys(modulesByAvgDifficulty).length === 0 && (
-              <p className="text-sm text-dsp-orange">
+              <p className="text-sm text-gray-500">
                 Keine Module mit bewertbaren Aufgaben.
               </p>
             )}
           </div>
         </div>
 
-        {/* Meiste / Wenigste Aufgaben */}
         <div className="lg:col-span-2 bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          {/* Angepasster Titelbereich */}
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 rounded-full bg-dsp-orange_light">
               <IoListOutline size={20} className="text-dsp-orange" />
@@ -257,7 +263,7 @@ function Dashboard() {
                 </p>
               </div>
             )}
-            {minTasks < Infinity && (
+            {minTasks < Infinity && minTasks > 0 && (
               <div className="mt-3">
                 <p className="font-semibold mb-1">
                   Wenigste Aufgaben ({minTasks}):
@@ -267,92 +273,94 @@ function Dashboard() {
                 </p>
               </div>
             )}
+            {minTasks === 0 && maxTasks <= 0 && (
+              <p className="text-sm text-gray-500">
+                Keine Aufgaben in den Modulen gefunden.
+              </p>
+            )}
           </div>
         </div>
       </div>
-      {/* --- NEU: Anstehende Fristen --- */}
-      {upcomingDeadlines.length > 0 && (
-        <div className="mt-12">
+      {/* --- Anstehende Fristen mit ausgelagertem Overlay --- */}
+      <div className="mt-12 relative">
+        <div>
           <h2 className="text-xl font-semibold mb-4 text-gray-800">
             Anstehende Fristen
           </h2>
-          <div className="space-y-3">
-            {upcomingDeadlines.map((deadline) => (
-              // Einzelner Frist-Eintrag
-              <div
-                key={deadline.id}
-                className="flex items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
-              >
-                {/* Icon mit Hintergrund */}
-                <div className="p-3 rounded-full bg-dsp-orange_light mr-4 flex-shrink-0">
-                  <IoTimeOutline size={20} className="text-dsp-orange" />
+          {upcomingDeadlines.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingDeadlines.map((deadline) => (
+                <div
+                  key={deadline.id}
+                  className="flex items-center bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                >
+                  <div className="p-3 rounded-full bg-dsp-orange_light mr-4 flex-shrink-0">
+                    <IoTimeOutline size={20} className="text-dsp-orange" />
+                  </div>
+                  <div className="flex-grow">
+                    <p className="text-md font-semibold text-gray-800">
+                      {deadline.title}
+                    </p>
+                    <p className="text-sm text-gray-500">{deadline.context}</p>
+                    <p className="text-sm font-medium text-red-600 mt-1">
+                      {deadline.dueDate}
+                    </p>
+                  </div>
                 </div>
-                {/* Titel, Kontext, Datum */}
-                <div className="flex-grow">
-                  <p className="text-md font-semibold text-gray-800">
-                    {deadline.title}
-                  </p>
-                  <p className="text-sm text-gray-500">{deadline.context}</p>
-                  <p className="text-sm font-medium text-red-600 mt-1">
-                    {deadline.dueDate}
-                  </p>
-                </div>
-                {/* Hier könnte später ein Link/Button hin */}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+              Aktuell keine anstehenden Fristen.
+            </p>
+          )}
         </div>
-      )}
-      {/* --- Persönlicher Bereich: Kürzlich bearbeitet --- */}
-      {inProgressModules.length > 0 && (
+
+        <ComingSoonOverlaySmall subMessage="(Die Anstehenden Fristen sind bald verfügbar)" />
+      </div>
+      {/* ------------------------------------------------------- */}
+
+      {modules.length > 0 && (
         <div className="mt-12">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">
-            Kürzlich bearbeitet
+            Deine Module
           </h2>
-          {/* Container für die Liste mit Transitions */}
           <div
-            className={`
-              space-y-3 
-              overflow-hidden // Behalten für die Animation
-              overflow-y-auto // Hinzufügen für Scrollen bei Bedarf
-              p-4 // Padding hinzugefügt
-              transition-[max-height] duration-700 ease-in-out
-              ${
-                showAllInProgress ? "max-h-[800px]" : "max-h-80"
-              } // Dynamische max-height
-            `}
+            className={`space-y-3 overflow-y-auto p-4 transition-[max-height] duration-700 ease-in-out ${
+              showAllModules ? "max-h-[800px]" : "max-h-80"
+            }`}
           >
-            {/* Immer alle Module rendern, max-height + overflow limitieren die Anzeige */}
-            {inProgressModules.map((module) => {
-              // Thumbnail Logik
-              const firstContent = Array.isArray(module.content)
-                ? module.content[0]
-                : module.content;
-              const videoId = getYouTubeVideoId(firstContent?.videoUrl);
+            {modules.map((module) => {
+              const firstContent = module.contents?.[0];
+              const videoId = getYouTubeVideoId(firstContent?.video_url);
               const thumbnailUrl = videoId
                 ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
                 : null;
 
+              const moduleTasks = module.tasks || [];
+              const totalTasksInModule = moduleTasks.length;
+              const completedTasksInModule = moduleTasks.filter(
+                (task) => task.completed
+              ).length;
+              const progressPercent =
+                totalTasksInModule > 0
+                  ? (completedTasksInModule / totalTasksInModule) * 100
+                  : 0;
+
               return (
-                // Link als äußerster Container der Karte
                 <Link
                   key={module.id}
                   to={`/modules/${module.id}`}
-                  // Padding anpassen, flex-col hinzufügen
                   className="block bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-dsp-orange transition duration-200 ease-in-out group flex flex-col"
                 >
-                  {/* Obere Zeile: Thumbnail, Titel, Play Button */}
                   <div className="flex items-center w-full mb-3">
-                    {/* Thumbnail oder Platzhalter */}
                     {thumbnailUrl ? (
                       <img
                         src={thumbnailUrl}
                         alt={`${module.title} thumbnail`}
-                        className="w-16 h-10 object-cover rounded mr-4 flex-shrink-0 bg-gray-200" // Hintergrund für Ladezustand
+                        className="w-16 h-10 object-cover rounded mr-4 flex-shrink-0 bg-gray-200"
                         onError={(e) => {
-                          // Fallback, falls Thumbnail nicht geladen werden kann
                           (e.target as HTMLImageElement).style.display = "none";
-                          // Optional: Zeige wieder Platzhalter
                           const placeholder = document.createElement("div");
                           placeholder.className =
                             "w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0";
@@ -367,40 +375,31 @@ function Dashboard() {
                     ) : (
                       <div className="w-16 h-10 bg-gray-200 rounded mr-4 flex-shrink-0"></div>
                     )}
-
-                    {/* Titel + Zeit (nimmt Restplatz ein) */}
                     <div className="flex-grow mr-4">
                       <h3 className="text-md font-semibold text-gray-800 group-hover:text-dsp-orange mb-1">
                         {module.title}
                       </h3>
-                      <p className="text-xs text-gray-500">Platzhalter Zeit</p>
                     </div>
-
-                    {/* Play Button */}
                     <IoPlayCircleOutline
                       size={28}
                       className="text-dsp-orange flex-shrink-0"
                     />
                   </div>
-
-                  {/* Untere Zeile: Fortschrittsbalken (volle Breite) */}
-                  {module.progress !== undefined && (
-                    // Container für den Fortschritt, mt für Abstand
+                  {totalTasksInModule > 0 && (
                     <div className="w-full mt-3">
-                      {/* Labels über dem Balken */}
                       <div className="flex justify-between mb-1">
                         <span className="text-xs font-medium text-gray-700">
-                          Fortschritt
+                          Fortschritt ({completedTasksInModule}/
+                          {totalTasksInModule})
                         </span>
                         <span className="text-xs font-medium text-gray-700">
-                          {module.progress}%
+                          {progressPercent.toFixed(0)}%
                         </span>
                       </div>
-                      {/* Balken */}
                       <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div
-                          className="bg-dsp-orange h-1.5 rounded-full"
-                          style={{ width: `${module.progress}%` }}
+                          className="bg-dsp-orange h-1.5 rounded-full transition-[width] duration-500 ease-out"
+                          style={{ width: `${progressPercent}%` }}
                         ></div>
                       </div>
                     </div>
@@ -410,39 +409,34 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Button zum Auf-/Zuklappen (Logik bleibt gleich) */}
-          {inProgressModules.length > 3 && (
+          {modules.length > 3 && (
             <button
               type="button"
-              onClick={() => setShowAllInProgress(!showAllInProgress)}
+              onClick={() => setShowAllModules(!showAllModules)}
               className="block w-full mt-4 text-center bg-white py-3 px-4 rounded-lg border border-gray-300 shadow-sm hover:bg-gray-50 text-gray-700 font-medium transition duration-150 ease-in-out"
             >
-              {showAllInProgress ? "Weniger anzeigen" : "Mehr anzeigen"}
+              {showAllModules ? "Weniger anzeigen" : "Mehr anzeigen"}
             </button>
           )}
         </div>
       )}
-      {inProgressModules.length === 0 && (
+      {modules.length === 0 && !loading && (
         <div className="mt-12 text-center text-gray-500">
-          <p>Du hast aktuell keine Module in Bearbeitung.</p>
-          <Link to="/modules" className="text-dsp-orange hover:underline">
-            Starte jetzt ein Modul!
-          </Link>
+          <p>Dir sind aktuell keine Module zugewiesen.</p>
         </div>
       )}
     </div>
   );
 }
 
-// Hilfskomponente für Statistik-Karten (Props erweitert)
 interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
-  accentColor?: string; // Optionale Akzentfarbe für Icon-Hintergrund
-  description?: string; // Optionale Beschreibung für Zusatzinfos
+  accentColor?: string;
+  description?: string;
 }
-// Korrigierte Komponentendefinition
+
 const StatCard: React.FC<StatCardProps> = ({
   title,
   value,

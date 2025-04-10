@@ -141,8 +141,12 @@ function LandingPage() {
         <div className="relative z-20">
           {" "}
           {/* z-10 stellt sicher, dass der Inhalt über dem Parallax-Div liegt */}
-          <AnimatedSection>
-            <img src={LogoDSP} alt="DataSmart Logo" className="mb-8 mx-auto" />
+          <AnimatedSection className="flex justify-center items-center">
+            <img
+              src={LogoDSP}
+              alt="DataSmart Logo"
+              className="mb-8 h-24 w-auto object-contain"
+            />
           </AnimatedSection>
           <AnimatedSection delay="delay-100">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">

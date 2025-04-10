@@ -32,7 +32,7 @@ const ButtonPrimary: React.FC<ButtonPrimaryProps> = ({
     <motion.button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center space-x-2 rounded-lg  py-2 px-4 bg-dsp-orange p-2
+      className={`flex items-center justify-center space-x-2 rounded-lg  py-2 px-4 bg-dsp-orange p-2
        hover:cursor-pointer focus:outline-none hover:font-bold
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
         ${classNameButton}`}
