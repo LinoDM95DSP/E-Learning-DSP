@@ -34,6 +34,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -204,4 +205,91 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+}
+
+# Jazzmin Settings
+JAZZMIN_SETTINGS = {
+    # Titel der Seite
+    "site_title": "E-Learning DSP Admin",
+    "site_header": "E-Learning DSP",
+    "site_brand": "E-Learning DSP",
+    "site_logo": None,
+    "login_logo": None,
+    "login_logo_dark": None,
+    "site_logo_classes": "img-circle",
+    "site_icon": None,
+    "welcome_sign": "Willkommen im E-Learning DSP Admin-Bereich",
+    "copyright": "E-Learning DSP Team",
+    
+    # Oberes Menü (wird Responsive in einem Dropdown erscheinen)
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Website", "url": "/", "new_window": True},
+    ],
+    
+    # Benutzerdefinierte Links die in der Benutzer-Dropdown erscheinen
+    "usermenu_links": [
+        {"name": "Mein Profil", "url": "admin:auth_user_change", "id_field": "user.id"},
+    ],
+    
+    # Icons für die Apps/Modelle (FontAwesome)
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "users": "fas fa-users",
+    },
+    
+    # UI-Anpassungen
+    "show_ui_builder": False,
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "auth.user": "collapsible",
+    },
+    
+    # Reihenfolge der Modelle im Admin-Menü
+    "order_with_respect_to": [
+        "auth",
+        "users",
+    ],
+    
+    # Benutzer-Avatar (vom Model)
+    "user_avatar": None,
+    
+    # Eigene CSS/JS-Dateien
+    "custom_css": None,
+    "custom_js": None,
+}
+
+# Jazzmin UI-Anpassungen
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-primary",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
 }
