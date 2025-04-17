@@ -10,8 +10,6 @@ import {
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import { useAuth } from "../context/AuthContext.tsx"; // Import useAuth
 import { useModules } from "../context/ModuleContext.tsx";
-import axios from "axios"; // Import axios for API call
-import api from "../util/apis/api"; // Korrigierter Import-Pfad
 import { useNavigate } from "react-router-dom"; // Import für Navigation
 
 interface LoginPopupProps {
@@ -22,14 +20,15 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  const { login } = useAuth(); // Hole die login Funktion aus dem Context
+  const { login } = useAuth();
   const { fetchModules } = useModules();
-  const navigate = useNavigate(); // Hook für Navigation
+  const navigate = useNavigate();
 
   // Animation beim Mounten
   useEffect(() => {
@@ -37,6 +36,14 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 50);
+
+    // Gespeicherte Anmeldedaten laden, falls vorhanden
+    const savedUsername = localStorage.getItem("rememberedUsername");
+    if (savedUsername) {
+      setEmail(savedUsername);
+      setRememberMe(true);
+    }
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -50,42 +57,43 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/token/", {
-        username: email,
-        password: password,
-      });
+      const loginResponse = await login({ username: email, password });
 
-      if (response.data && response.data.access && response.data.refresh) {
-        console.log("Login erfolgreich, Token erhalten");
-        await login(response.data);
-        await fetchModules(); // Module nach erfolgreichem Login laden
-        onClose();
-        navigate("/dashboard");
-      } else {
-        setError("Ungültige Antwort vom Server.");
-      }
-    } catch (err: unknown) {
-      console.error("Login fehlgeschlagen:", err);
-      if (axios.isAxiosError(err)) {
-        if (err.response?.status === 401) {
-          setError(
-            "Ungültige Anmeldedaten. Bitte überprüfe Benutzername und Passwort."
-          );
-        } else if (err.response?.status === 404) {
-          setError(
-            "Login-Service nicht erreichbar. Bitte versuche es später erneut."
-          );
+      // DEBUG: Logge die Antwort vom AuthContext
+      console.log("Login Response from AuthContext:", loginResponse);
+
+      if (loginResponse.success) {
+        console.log("Login erfolgreich, AuthContext aktualisiert.");
+
+        // Anmeldedaten merken
+        if (rememberMe) {
+          localStorage.setItem("rememberedUsername", email);
         } else {
-          setError(
-            `Fehler beim Login: ${
-              err.response?.data?.detail ||
-              "Ein unbekannter Fehler ist aufgetreten."
-            }`
+          localStorage.removeItem("rememberedUsername");
+        }
+
+        // Prüfe, ob Passwortänderung erforderlich ist
+        if (loginResponse.require_password_change) {
+          console.log("Passwortänderung erforderlich, leite weiter...");
+          navigate("/force-password-change");
+          onClose(); // Schließe das Login-Popup
+        } else {
+          console.log(
+            "Keine Passwortänderung erforderlich, lade Module und gehe zum Dashboard."
           );
+          await fetchModules(); // Module nach erfolgreichem Login laden
+          onClose(); // Schließe das Login-Popup
+          navigate("/dashboard");
         }
       } else {
-        setError("Login fehlgeschlagen. Bitte versuche es später erneut.");
+        // Fehlermeldung aus der login Funktion verwenden
+        setError(loginResponse.error || "Login fehlgeschlagen.");
       }
+    } catch (err: unknown) {
+      // Dieser Catch-Block sollte jetzt seltener getroffen werden,
+      // da Fehler idealerweise in der login-Funktion behandelt werden.
+      console.error("Unerwarteter Fehler während des Login-Prozesses:", err);
+      setError("Ein unerwarteter Fehler ist aufgetreten.");
     } finally {
       setIsLoading(false);
     }
@@ -266,7 +274,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm
                       focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange
                       transition-all duration-200 ease-in-out
-                      hover:border-dsp-orange"
+                      hover:border-dsp-orange cursor-pointer"
                     placeholder="Benutzername"
                   />
                 </div>
@@ -301,7 +309,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
                     className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md shadow-sm
                       focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange
                       transition-all duration-200 ease-in-out
-                      hover:border-dsp-orange"
+                      hover:border-dsp-orange cursor-pointer"
                     placeholder="********"
                   />
                   <button
@@ -316,6 +324,34 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ onClose }) => {
                   >
                     {showPassword ? <IoEyeOffOutline /> : <IoEyeOutline />}
                   </button>
+                </div>
+              </div>
+
+              {/* Anmeldedaten merken Checkbox */}
+              <div
+                className={`transition-all duration-300 ease-out
+                ${
+                  isVisible
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-2"
+                }
+                ${isClosing ? "opacity-0 translate-y-2" : ""}`}
+              >
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={() => setRememberMe(!rememberMe)}
+                    className="h-4 w-4 text-dsp-orange focus:ring-dsp-orange border-gray-300 rounded cursor-pointer"
+                  />
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-700 cursor-pointer"
+                  >
+                    Anmeldedaten merken
+                  </label>
                 </div>
               </div>
 

@@ -1,39 +1,46 @@
 """
-URL configuration for backend project.
+URL-Konfiguration für das Backend-Projekt.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+Diese Datei definiert die Haupt-URL-Routen des Projekts,
+einschließlich API-Endpunkten und Authentifizierungspfaden.
 """
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
-    TokenVerifyView, # Optional: zum Überprüfen eines Tokens
+    TokenVerifyView,
 )
+from users.views.auth_views import CustomTokenObtainPairView
 
 urlpatterns = [
+    # Django Admin
     path('admin/', admin.site.urls),
-    # API Endpunkte für deine Apps
+    
+    # API-Endpunkte für Module
     path('api/modules/', include('modules.urls')),
+    
+    # API-Endpunkte für Benutzer
     path('api/users/', include('users.urls')),
 
-    # JWT Token Endpunkte
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), # Zum Anmelden (POST mit username/password)
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   # Zum Erneuern des Access Tokens (POST mit refresh)
-    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),     # Optional: Zum Prüfen ob Access Token gültig ist (POST mit token)
-
-    # Hier könnten noch weitere Pfade für z.B. Passwort Reset, etc. folgen
+    # JWT-Authentifizierungsendpunkte
+    path(
+        'api/token/', 
+        CustomTokenObtainPairView.as_view(), 
+        name='token_obtain_pair'
+    ),  # Liefert Access- und Refresh-Token (POST mit username/password)
+       # Enthält is_staff und is_superuser im Token-Payload
+    
+    path(
+        'api/token/refresh/', 
+        TokenRefreshView.as_view(), 
+        name='token_refresh'
+    ),  # Erneuert Access-Token mit Refresh-Token (POST mit refresh)
+    
+    path(
+        'api/token/verify/', 
+        TokenVerifyView.as_view(), 
+        name='token_verify'
+    ),  # Prüft, ob Access-Token gültig ist (POST mit token)
 ]
 
 # Konfiguration für static/media files im Development (falls noch nicht vorhanden)

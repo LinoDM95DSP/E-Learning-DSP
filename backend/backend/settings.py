@@ -207,6 +207,16 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
+# Email Settings (für Entwicklung)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@e-learning-dsp.com' # Beispiel Absender
+
+# Frontend URL (wichtig für E-Mail Links)
+FRONTEND_URL = 'http://localhost:5173'
+
+# Passwort Reset/Aktivierungslink Timeout (in Sekunden)
+PASSWORD_RESET_TIMEOUT = 3600  # 1 Stunde
+
 # Jazzmin Settings
 JAZZMIN_SETTINGS = {
     # Titel der Seite

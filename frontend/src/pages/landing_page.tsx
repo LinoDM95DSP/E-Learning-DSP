@@ -125,11 +125,11 @@ function LandingPage() {
 
         {/* Animierte Kreise */}
         <motion.div
-          className="absolute top-[15%] left-[10%] w-32 h-32 bg-dsp-orange/30 rounded-full filter blur-xl opacity-70 z-0"
+          className="absolute top-[15%] left-[10%] w-32 h-32 bg-dsp-orange/40 rounded-full filter blur-xl opacity-70 z-0"
           style={{ x: circle1X, y: circle1Y }}
         />
         <motion.div
-          className="absolute bottom-[20%] right-[15%] w-48 h-48 bg-blue-200/40 rounded-full filter blur-2xl opacity-60 z-0"
+          className="absolute bottom-[20%] right-[15%] w-48 h-48 bg-dsp-orange/40 rounded-full filter blur-2xl opacity-60 z-0"
           style={{ x: circle2X, y: circle2Y }}
         />
         <motion.div

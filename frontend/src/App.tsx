@@ -11,6 +11,8 @@ import LandingPage from "./pages/landing_page";
 import UserSettings from "./pages/user_settings";
 import LoginPopup from "./pages/login";
 import SubscriptionsPage from "./pages/subscriptions";
+import AdminPanel from "./pages/admin_panel";
+import ForcePasswordChangePage from "./pages/ForcePasswordChangePage";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Components
@@ -32,6 +34,9 @@ const AppContent: React.FC = () => {
 
   const openLoginPopup = () => setLoginPopupOpen(true);
   const closeLoginPopup = () => setLoginPopupOpen(false);
+
+  // Überprüfen, ob der Benutzer Admin-Rechte hat (is_staff oder is_superuser)
+  const isAdmin = user && (user.is_staff || user.is_superuser);
 
   // Passe die Navigation basierend auf dem Login-Status an
   // Hauptnavigation (links/mitte) erwartet `NavLink[]` (immer mit `to`)
@@ -57,6 +62,8 @@ const AppContent: React.FC = () => {
           { title: "Module & Lerninhalte", to: "/modules" },
           { title: "Abschlussprüfungen", to: "/final-exam" },
           { title: "Deine Statistik", to: "/user-stats" },
+          // Nur Admin-Benutzer sehen den Admin-Panel Link
+          ...(isAdmin ? [{ title: "Back‑Office", to: "/admin" }] : []),
         ]
       : []),
   ];
@@ -93,7 +100,12 @@ const AppContent: React.FC = () => {
 
             {/* Geschützte Routen mit ProtectedRoute umschließen */}
             <Route element={<ProtectedRoute />}>
-              {/* Kind-Routen von ProtectedRoute */}
+              {/* Neue Route für erzwungene Passwortänderung */}
+              <Route
+                path="/force-password-change"
+                element={<ForcePasswordChangePage />}
+              />
+              {/* Bestehende Kind-Routen von ProtectedRoute */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/modules" element={<Modules />} />
               <Route path="/modules/:moduleId" element={<ModuleDetail />} />
@@ -104,6 +116,9 @@ const AppContent: React.FC = () => {
               <Route path="/final-exam" element={<FinalExam />} />
               <Route path="/user-stats" element={<Statistics />} />
               <Route path="/settings" element={<UserSettings />} />
+
+              {/* Admin Panel Route - nur für Staff/Superuser */}
+              {isAdmin && <Route path="/admin" element={<AdminPanel />} />}
             </Route>
 
             {/* Fallback oder 404 Route */}
