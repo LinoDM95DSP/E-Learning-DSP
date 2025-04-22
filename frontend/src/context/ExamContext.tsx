@@ -1,0 +1,353 @@
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import api from "../util/apis/api";
+import { useAuth } from "./AuthContext";
+
+// Typ-Definitionen für Exam-bezogene Daten
+export interface Criterion {
+  id: number;
+  title: string;
+  description: string;
+  max_points: number;
+}
+
+export interface Module {
+  id: number;
+  title: string;
+}
+
+export interface Exam {
+  id: number;
+  title: string;
+  description: string;
+  difficulty: "easy" | "medium" | "hard";
+  duration_weeks: number;
+  created_at: string;
+  updated_at: string;
+  modules: Module[];
+  criteria: Criterion[];
+}
+
+export interface CriterionScore {
+  id: number;
+  criterion: Criterion;
+  achieved_points: number;
+}
+
+export interface ExamAttempt {
+  id: number;
+  exam: Exam;
+  user: {
+    id: number;
+    username: string;
+  };
+  status: "started" | "submitted" | "graded";
+  started_at: string;
+  submitted_at: string | null;
+  graded_at: string | null;
+  score: number | null;
+  feedback: string | null;
+  due_date: string | null;
+  remaining_days: number | null;
+  processing_time_days: number | null;
+  criterion_scores: CriterionScore[];
+}
+
+// Definition des Context-Typs
+interface ExamContextType {
+  // User-bezogene Daten
+  availableExams: Exam[];
+  activeExams: ExamAttempt[];
+  completedExams: ExamAttempt[];
+  loadingUserExams: boolean;
+  errorUserExams: string | null;
+
+  // Teacher-bezogene Daten
+  teacherSubmissions: ExamAttempt[];
+  loadingTeacherData: boolean;
+  errorTeacherData: string | null;
+
+  // Aktionen
+  refreshUserExams: () => Promise<void>;
+  refreshTeacherData: () => Promise<void>;
+  startExam: (examId: number) => Promise<ExamAttempt | null>;
+  submitExam: (attemptId: number, attachments?: File[]) => Promise<boolean>;
+  gradeExam: (
+    attemptId: number,
+    scores: { criterion_id: number; achieved_points: number }[],
+    feedback: string
+  ) => Promise<boolean>;
+}
+
+// Default-Werte für den Context
+const defaultContextValue: ExamContextType = {
+  // User-bezogene Daten
+  availableExams: [],
+  activeExams: [],
+  completedExams: [],
+  loadingUserExams: false,
+  errorUserExams: null,
+
+  // Teacher-bezogene Daten
+  teacherSubmissions: [],
+  loadingTeacherData: false,
+  errorTeacherData: null,
+
+  // Default-Implementierungen für Aktionen
+  refreshUserExams: async () => {
+    console.warn("ExamProvider nicht initialisiert");
+  },
+  refreshTeacherData: async () => {
+    console.warn("ExamProvider nicht initialisiert");
+  },
+  startExam: async () => {
+    console.warn("ExamProvider nicht initialisiert");
+    return null;
+  },
+  submitExam: async () => {
+    console.warn("ExamProvider nicht initialisiert");
+    return false;
+  },
+  gradeExam: async () => {
+    console.warn("ExamProvider nicht initialisiert");
+    return false;
+  },
+};
+
+// Context erstellen
+const ExamContext = createContext<ExamContextType>(defaultContextValue);
+
+// Custom Hook für einfachen Zugriff
+export const useExams = () => {
+  const context = useContext(ExamContext);
+  if (!context) {
+    throw new Error(
+      "useExams muss innerhalb eines ExamProviders verwendet werden"
+    );
+  }
+  return context;
+};
+
+// Provider-Komponente
+interface ExamProviderProps {
+  children: ReactNode;
+}
+
+export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  // State für User-bezogene Daten
+  const [availableExams, setAvailableExams] = useState<Exam[]>([]);
+  const [activeExams, setActiveExams] = useState<ExamAttempt[]>([]);
+  const [completedExams, setCompletedExams] = useState<ExamAttempt[]>([]);
+  const [loadingUserExams, setLoadingUserExams] = useState<boolean>(false);
+  const [errorUserExams, setErrorUserExams] = useState<string | null>(null);
+
+  // State für Teacher-bezogene Daten
+  const [teacherSubmissions, setTeacherSubmissions] = useState<ExamAttempt[]>(
+    []
+  );
+  const [loadingTeacherData, setLoadingTeacherData] = useState<boolean>(false);
+  const [errorTeacherData, setErrorTeacherData] = useState<string | null>(null);
+
+  // API-Anfragen für User-bezogene Daten
+  const fetchUserExams = async () => {
+    if (!isAuthenticated) {
+      console.log("ExamContext: Nicht authentifiziert, lade keine Prüfungen");
+      return;
+    }
+
+    console.log("ExamContext: Starte Abruf der Prüfungsdaten");
+    setLoadingUserExams(true);
+    setErrorUserExams(null);
+
+    try {
+      // Parallele Anfragen für verschiedene Prüfungstypen
+      console.log("ExamContext: Sende parallele API-Anfragen");
+      const [availableRes, activeRes, completedRes] = await Promise.all([
+        api.get("exams/my-exams/available/"),
+        api.get("exams/my-exams/active/"),
+        api.get("exams/my-exams/completed/"),
+      ]);
+
+      console.log("ExamContext: Daten erhalten:", {
+        available: availableRes.data.length,
+        active: activeRes.data.length,
+        completed: completedRes.data.length,
+      });
+
+      setAvailableExams(availableRes.data);
+      setActiveExams(activeRes.data);
+      setCompletedExams(completedRes.data);
+    } catch (error) {
+      console.error("Fehler beim Laden der Prüfungsdaten:", error);
+      setErrorUserExams(
+        "Die Prüfungsdaten konnten nicht geladen werden. Bitte versuche es später erneut."
+      );
+    } finally {
+      setLoadingUserExams(false);
+    }
+  };
+
+  // API-Anfragen für Teacher-bezogene Daten
+  const fetchTeacherSubmissions = async () => {
+    if (!isAuthenticated || !user?.is_staff) return;
+
+    setLoadingTeacherData(true);
+    setErrorTeacherData(null);
+
+    try {
+      const response = await api.get("exams/teacher/submissions/");
+      setTeacherSubmissions(response.data);
+    } catch (error) {
+      console.error("Fehler beim Laden der Lehrer-Ansicht:", error);
+      setErrorTeacherData(
+        "Die Daten konnten nicht geladen werden. Bitte versuche es später erneut."
+      );
+    } finally {
+      setLoadingTeacherData(false);
+    }
+  };
+
+  // Aktionen
+  const startExam = async (examId: number): Promise<ExamAttempt | null> => {
+    if (!isAuthenticated) return null;
+
+    try {
+      // POST-Anfrage zum Starten einer Prüfung
+      const response = await api.post(`exams/${examId}/start/`);
+
+      // Daten aktualisieren
+      await refreshUserExams();
+
+      return response.data;
+    } catch (error) {
+      console.error("Fehler beim Starten der Prüfung:", error);
+      return null;
+    }
+  };
+
+  const submitExam = async (
+    attemptId: number,
+    attachments?: File[]
+  ): Promise<boolean> => {
+    if (!isAuthenticated) return false;
+
+    try {
+      let formData: FormData | null = null;
+
+      // Wenn Anhänge vorhanden sind, FormData für Multipart-Request verwenden
+      if (attachments && attachments.length > 0) {
+        formData = new FormData();
+        attachments.forEach((file, index) => {
+          if (formData) {
+            // TypeScript-Check für FormData
+            formData.append(`attachment_${index}`, file);
+          }
+        });
+      }
+
+      // POST-Anfrage zum Abgeben einer Prüfung
+      await api.post(`exams/attempts/${attemptId}/submit/`, formData, {
+        headers: formData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+      });
+
+      // Daten aktualisieren
+      await refreshUserExams();
+
+      return true;
+    } catch (error) {
+      console.error("Fehler beim Abgeben der Prüfung:", error);
+      return false;
+    }
+  };
+
+  const gradeExam = async (
+    attemptId: number,
+    scores: { criterion_id: number; achieved_points: number }[],
+    feedback: string
+  ): Promise<boolean> => {
+    if (!isAuthenticated || !user?.is_staff) return false;
+
+    try {
+      // POST-Anfrage zum Bewerten einer Prüfung
+      await api.post(`exams/teacher/submissions/${attemptId}/grade/`, {
+        criterion_scores: scores,
+        feedback,
+      });
+
+      // Daten aktualisieren
+      await refreshTeacherData();
+
+      return true;
+    } catch (error) {
+      console.error("Fehler beim Bewerten der Prüfung:", error);
+      return false;
+    }
+  };
+
+  // Refresh-Funktionen
+  const refreshUserExams = async () => {
+    await fetchUserExams();
+  };
+
+  const refreshTeacherData = async () => {
+    await fetchTeacherSubmissions();
+  };
+
+  // Initialer Datenload und Reaktion auf Auth-Änderungen
+  useEffect(() => {
+    console.log(
+      "ExamContext: Auth-Status geändert, isAuthenticated =",
+      isAuthenticated,
+      "user =",
+      user?.username
+    );
+    if (isAuthenticated) {
+      fetchUserExams();
+
+      if (user?.is_staff) {
+        console.log("ExamContext: Benutzer ist Staff, lade auch Teacher-Daten");
+        fetchTeacherSubmissions();
+      }
+    } else {
+      // Zurücksetzen der Daten bei Logout
+      console.log("ExamContext: Nicht authentifiziert, setze Daten zurück");
+      setAvailableExams([]);
+      setActiveExams([]);
+      setCompletedExams([]);
+      setTeacherSubmissions([]);
+    }
+  }, [isAuthenticated, user]); // Direkte Abhängigkeit vom Auth-Status
+
+  // Context-Value
+  const value: ExamContextType = {
+    // User-bezogene Daten
+    availableExams,
+    activeExams,
+    completedExams,
+    loadingUserExams,
+    errorUserExams,
+
+    // Teacher-bezogene Daten
+    teacherSubmissions,
+    loadingTeacherData,
+    errorTeacherData,
+
+    // Aktionen
+    refreshUserExams,
+    refreshTeacherData,
+    startExam,
+    submitExam,
+    gradeExam,
+  };
+
+  return <ExamContext.Provider value={value}>{children}</ExamContext.Provider>;
+};

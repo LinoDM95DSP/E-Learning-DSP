@@ -19,6 +19,9 @@ urlpatterns = [
     # API-Endpunkte für Module
     path('api/modules/', include('modules.urls')),
     
+    # API-Endpunkte für Prüfungen (final_exam)
+    path('api/exams/', include('final_exam.urls')),
+
     # API-Endpunkte für Benutzer
     path('api/users/', include('users.urls')),
 

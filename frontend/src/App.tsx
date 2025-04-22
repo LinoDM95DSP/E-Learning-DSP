@@ -24,6 +24,8 @@ import LogoDSP from "./assets/dsp_no_background.png";
 import { NavItem } from "./components/layouts/header.tsx";
 // Import Auth Context
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
+import { ModuleProvider } from "./context/ModuleContext";
+import { ExamProvider } from "./context/ExamContext";
 import ProtectedRoute from "./components/utils/ProtectedRoute.tsx";
 
 // Verschiebe Navigationsdaten und die Hauptlogik in eine separate Komponente,
@@ -137,9 +139,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        {" "}
-        {/* Wickel die gesamte App in den AuthProvider */}
-        <AppContent />
+        <ModuleProvider>
+          <ExamProvider>
+            <AppContent />
+          </ExamProvider>
+        </ModuleProvider>
       </AuthProvider>
     </Router>
   );

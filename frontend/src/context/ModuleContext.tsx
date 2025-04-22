@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import api from "../util/apis/api";
+import { useAuth } from "./AuthContext"; // Direkte Verwendung des AuthContext
 
 // --- Type Definitions (Derived from Backend Models) ---
 
@@ -69,22 +70,30 @@ interface ModuleProviderProps {
 }
 
 export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth(); // Verwenden des AuthContext (nur isAuthenticated)
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchModules = async () => {
-    const authTokens = localStorage.getItem("authTokens");
-    if (!authTokens) {
+    // Prüfen des Auth-Status direkt über den AuthContext
+    if (!isAuthenticated) {
+      console.log("ModuleContext: Nicht authentifiziert, setze Module zurück");
       setModules([]);
       setLoading(false);
       return;
     }
 
+    console.log("ModuleContext: Lade Module für authentifizierten Benutzer");
     setLoading(true);
     setError(null);
     try {
       const response = await api.get<Module[]>("/modules/user/");
+      console.log(
+        "ModuleContext: API-Antwort erhalten",
+        response.data.length,
+        "Module"
+      );
 
       const sortedModules = response.data
         .map((module) => ({
@@ -98,6 +107,7 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
           return a.title.localeCompare(b.title);
         });
       setModules(sortedModules);
+      console.log("ModuleContext: Module sortiert und gesetzt");
     } catch (err) {
       console.error("Error fetching modules:", err);
       const fetchError =
@@ -109,27 +119,18 @@ export const ModuleProvider: React.FC<ModuleProviderProps> = ({ children }) => {
     }
   };
 
+  // Laden der Module, wenn der Benutzer authentifiziert ist
   useEffect(() => {
-    const authTokens = localStorage.getItem("authTokens");
-    if (authTokens) {
+    console.log(
+      "ModuleContext: Auth-Status geändert, isAuthenticated =",
+      isAuthenticated
+    );
+    if (isAuthenticated) {
       fetchModules();
+    } else {
+      setModules([]);
     }
-  }, []);
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "authTokens") {
-        if (e.newValue) {
-          fetchModules();
-        } else {
-          setModules([]);
-        }
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [isAuthenticated]); // Direkte Abhängigkeit vom Auth-Status
 
   const value: ModuleContextType = {
     modules,

@@ -1,5 +1,5 @@
 // Modules.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CardPreviewSmall from "../components/cards/card_preview_small";
 import FilterHead from "../components/filter/filter_head";
@@ -12,6 +12,19 @@ function Modules() {
   const { modules, loading, error, fetchModules } = useModules();
   const [activeFilters, setActiveFilters] = useState<DifficultyLevel[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  console.log("Modules-Komponente: rendering", {
+    moduleCount: modules.length,
+    loading,
+    hasError: !!error,
+  });
+
+  useEffect(() => {
+    console.log(
+      "Modules-Komponente: Aktualisierte Module erhalten",
+      modules.length
+    );
+  }, [modules]);
 
   const getFirstYoutubeId = (module: Module): string | undefined => {
     const firstContentWithVideo = module.contents?.find((c) => c.video_url);

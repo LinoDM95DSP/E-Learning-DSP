@@ -5,8 +5,9 @@ import UserList from "../components/ui_elements/user/UserList";
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import CreateUserForm from "../components/ui_elements/forms/create_user_form";
 import * as userAdminApi from "../util/apis/userAdminApi";
+import AdminPanelExamReviewSection from "./admin_panel_exam_review_section";
 
-type TabState = "benutzerliste" | "benutzer-erstellen";
+type TabState = "benutzerliste" | "benutzer-erstellen" | "abschlussprüfungen";
 
 // Stellen Sie sicher, dass die Typen zwischen Frontend und API übereinstimmen
 interface User {
@@ -115,7 +116,13 @@ const AdminPanel: React.FC = () => {
         className="absolute inset-y-0 bg-dsp-orange rounded-md shadow-sm transition-all duration-300 ease-out pointer-events-none"
         style={sliderStyle}
       />
-      {(["benutzerliste", "benutzer-erstellen"] as TabState[]).map((tab) => (
+      {(
+        [
+          "benutzerliste",
+          "benutzer-erstellen",
+          "abschlussprüfungen",
+        ] as TabState[]
+      ).map((tab) => (
         <button
           key={tab}
           data-tab={tab}
@@ -127,7 +134,11 @@ const AdminPanel: React.FC = () => {
                 : "text-gray-600 hover:text-gray-800"
             }`}
         >
-          {tab === "benutzerliste" ? "Benutzerliste" : "Benutzer erstellen"}
+          {tab === "benutzerliste"
+            ? "Benutzerliste"
+            : tab === "benutzer-erstellen"
+            ? "Benutzer erstellen"
+            : "Abschlussprüfungen"}
         </button>
       ))}
     </div>
@@ -191,6 +202,8 @@ const AdminPanel: React.FC = () => {
           <CreateUserForm onUserCreated={handleUserCreated} />
         </div>
       )}
+
+      {activeTab === "abschlussprüfungen" && <AdminPanelExamReviewSection />}
 
       {/* Lösch-Bestätigungsmodal */}
       {showDeleteConfirm && (

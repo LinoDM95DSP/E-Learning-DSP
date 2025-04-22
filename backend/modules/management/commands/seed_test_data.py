@@ -4,12 +4,19 @@ from django.db import transaction
 # Corrected import path assuming models.py is in the parent 'modules' directory
 from ...models import Module, Content, Task, SupplementaryContent
 from django.contrib.auth.models import User # Import User model
+# Import von Exam-Modellen
+try:
+    from final_exam.models import Exam, ExamCriterion
+    EXAMS_AVAILABLE = True
+except ImportError:
+    EXAMS_AVAILABLE = False
+    logging.warning("Die App 'final_exam' wurde nicht gefunden. Prüfungen werden nicht erstellt.")
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Cleans and seeds the database with test data for Python modules.' # Updated help text
+    help = 'Cleans and seeds the database with test data for Python modules and exams.' # Updated help text
 
     def _create_module(self, title, is_public=True):
         module, created = Module.objects.get_or_create(
@@ -70,11 +77,87 @@ class Command(BaseCommand):
             self.stdout.write(f'    - Supplementary "{label}" already exists.')
         return sup_content
 
+    # --- Methods for Exam Generation ---
+    def _create_exam(self, title, duration_weeks, difficulty, description, modules=None):
+        """
+        Erstellt eine Prüfung mit optionalen Modulvoraussetzungen.
+        """
+        if not EXAMS_AVAILABLE:
+            self.stdout.write(self.style.WARNING(f'Überspringe Prüfung "{title}": App final_exam nicht verfügbar.'))
+            return None
+
+        exam, created = Exam.objects.get_or_create(
+            title=title,
+            defaults={
+                'duration_weeks': duration_weeks,
+                'difficulty': difficulty,
+                'description': description,
+            }
+        )
+
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'Prüfung erstellt: "{title}" (Dauer: {duration_weeks} Wochen)'))
+        else:
+            self.stdout.write(f'Prüfung "{title}" existiert bereits.')
+
+        # Stellen wir sicher, dass keine Module zugewiesen sind, bevor wir neue zuweisen
+        exam.modules.clear()
+        
+        # Module zuweisen, falls vorhanden
+        if modules:
+            exam.modules.set(modules)
+            module_names = ", ".join([m.title for m in modules])
+            self.stdout.write(f'  - Module zugewiesen: {module_names}')
+        else:
+            self.stdout.write(f'  - Keine Module zugewiesen: Diese Prüfung hat keine Voraussetzungen')
+        
+        return exam
+
+    def _create_exam_criterion(self, exam, title, description, max_points):
+        """
+        Erstellt ein Bewertungskriterium für eine Prüfung.
+        """
+        if not EXAMS_AVAILABLE or not exam:
+            return None
+
+        criterion, created = ExamCriterion.objects.get_or_create(
+            exam=exam,
+            title=title,
+            defaults={
+                'description': description,
+                'max_points': max_points,
+            }
+        )
+
+        if created:
+            self.stdout.write(self.style.SUCCESS(f'  - Kriterium erstellt: "{title}" (max. {max_points} Punkte)'))
+        else:
+            self.stdout.write(f'  - Kriterium "{title}" existiert bereits.')
+        
+        return criterion
+
     @transaction.atomic
     def handle(self, *args, **options):
         self.stdout.write(self.style.WARNING('Starting database cleanup before seeding...'))
 
-        # --- Cleanup existing data --- 
+        # --- Cleanup existing data ---
+        # Zuerst Exam-bezogene Daten löschen, falls die App verfügbar ist
+        if EXAMS_AVAILABLE:
+            self.stdout.write('Lösche Exam-bezogene Daten...')
+            # Lösche alle Exam-Module-Beziehungen
+            for exam in Exam.objects.all():
+                exam.modules.clear()
+                self.stdout.write(f'  - Module-Beziehungen für Exam "{exam.title}" gelöscht.')
+            
+            # Bewertungskriterien löschen
+            deleted_count, _ = ExamCriterion.objects.all().delete()
+            self.stdout.write(f'  - Deleted {deleted_count} ExamCriterion objects.')
+            
+            # Prüfungen löschen
+            deleted_count, _ = Exam.objects.all().delete()
+            self.stdout.write(f'  - Deleted {deleted_count} Exam objects.')
+        
+        # Dann die übrigen Module-bezogenen Daten löschen
         deleted_count, _ = SupplementaryContent.objects.all().delete()
         self.stdout.write(f'  - Deleted {deleted_count} SupplementaryContent objects.')
         deleted_count, _ = Content.objects.all().delete()
@@ -278,4 +361,164 @@ class Command(BaseCommand):
         self._create_task(module_pro, "Aufgabe: Einfache asynchrone Funktion", 'Schreibe eine `async def fetch_data(url)` die (simuliert) Daten abruft, indem sie 1 Sekunde wartet (`asyncio.sleep(1)`) und einen Dummy-String zurückgibt.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_async_fetch.py", 6, 'Importiere `asyncio`.')
 
 
-        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully for all Python modules.')) 
+        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully for all Python modules.'))
+
+        # ==========================================
+        # === Prüfungen (Exam Seed Data) =========
+        # ==========================================
+        if EXAMS_AVAILABLE:
+            self.stdout.write(self.style.SUCCESS('\nStarte mit dem Erstellen von Prüfungen...'))
+
+            # --- Prüfungen ohne Modulvoraussetzungen ---
+            self.stdout.write('\n--- Prüfungen ohne Modulvoraussetzungen ---')
+            
+            # Einfache Einstiegsprüfung ohne Voraussetzungen
+            exam_intro = self._create_exam(
+                "Python Einsteiger-Quiz", 
+                duration_weeks=1, 
+                difficulty="easy", 
+                description="Ein einfaches Quiz für Python-Einsteiger. Keine Vorkenntnisse erforderlich."
+            )
+            
+            # Bewertungskriterien hinzufügen
+            self._create_exam_criterion(exam_intro, "Grundlegende Konzepte", "Verständnis der Python-Grundlagen", 40)
+            self._create_exam_criterion(exam_intro, "Syntax", "Korrekte Syntax und Ausdrucksweise", 30)
+            self._create_exam_criterion(exam_intro, "Dokumentation", "Klarheit und Vollständigkeit der Erklärungen", 30)
+
+            # Fortgeschrittene Prüfung ohne Voraussetzungen
+            exam_freestyle = self._create_exam(
+                "Freestyle Programmieraufgabe", 
+                duration_weeks=2, 
+                difficulty="medium", 
+                description="Entwickle ein eigenständiges Python-Programm zu einem selbstgewählten Thema. Kreativität und sauberer Code sind wichtig."
+            )
+            
+            # Bewertungskriterien hinzufügen
+            self._create_exam_criterion(exam_freestyle, "Code-Qualität", "Lesbarkeit, Struktur und Dokumentation", 25)
+            self._create_exam_criterion(exam_freestyle, "Funktionalität", "Korrekte Implementierung der Anforderungen", 25)
+            self._create_exam_criterion(exam_freestyle, "Innovation", "Kreativität und Originalität der Lösung", 25)
+            self._create_exam_criterion(exam_freestyle, "Präsentation", "Darstellung und Erklärung des Projekts", 25)
+
+            # --- Prüfungen mit Modulvoraussetzungen ---
+            self.stdout.write('\n--- Prüfungen mit Modulvoraussetzungen ---')
+            
+            # Grundlagenprüfung (erfordert Python Grundlagen Modul)
+            try:
+                module_basics = Module.objects.get(title="Python Grundlagen")
+                
+                exam_basics = self._create_exam(
+                    "Python Grundlagen Abschlussprüfung", 
+                    duration_weeks=1, 
+                    difficulty="easy", 
+                    description="Teste deine Beherrschung der Python-Grundlagen. Variablen, Kontrollstrukturen und einfache Funktionen.",
+                    modules=[module_basics]
+                )
+                
+                # Bewertungskriterien 
+                self._create_exam_criterion(exam_basics, "Variablen & Datentypen", "Korrekte Verwendung von Variablen und Datentypen", 20)
+                self._create_exam_criterion(exam_basics, "Kontrollstrukturen", "Effektive Nutzung von if/else und Schleifen", 30)
+                self._create_exam_criterion(exam_basics, "Funktionen", "Funktionsdefinition und -aufruf", 30)
+                self._create_exam_criterion(exam_basics, "Code-Stil", "Einhaltung der PEP 8 Richtlinien", 20)
+                
+            except Module.DoesNotExist:
+                self.stdout.write(self.style.WARNING('Modul "Python Grundlagen" nicht gefunden, überspringe zugehörige Prüfung.'))
+
+            # Mehrmodulprüfung (erfordert mehrere Module)
+            try:
+                modules_to_include = []
+                
+                for module_title in ["Python Grundlagen", "Python Datenstrukturen"]:
+                    try:
+                        module = Module.objects.get(title=module_title)
+                        modules_to_include.append(module)
+                    except Module.DoesNotExist:
+                        self.stdout.write(self.style.WARNING(f'Modul "{module_title}" nicht gefunden.'))
+                
+                if len(modules_to_include) >= 2:
+                    exam_multi = self._create_exam(
+                        "Python Programmierung Praktikum", 
+                        duration_weeks=3, 
+                        difficulty="medium", 
+                        description="Praktische Programmieraufgabe mit grundlegenden Konzepten und Datenstrukturen.",
+                        modules=modules_to_include
+                    )
+                    
+                    # Bewertungskriterien
+                    self._create_exam_criterion(exam_multi, "Problemanalyse", "Analyse und Verständnis der Aufgabenstellung", 20)
+                    self._create_exam_criterion(exam_multi, "Datenstrukturen", "Korrekte Auswahl und Implementierung der Datenstrukturen", 25)
+                    self._create_exam_criterion(exam_multi, "Algorithmus", "Effizienz und Korrektheit des Algorithmus", 30)
+                    self._create_exam_criterion(exam_multi, "Codequalität", "Lesbarkeit, Struktur und Dokumentation", 25)
+                    
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Fehler beim Erstellen der Mehrmodulprüfung: {e}'))
+
+            # Fortgeschrittene Prüfung
+            try:
+                modules_advanced = []
+                for module_title in ["Python Fortgeschrittene", "OOP in Python"]:
+                    try:
+                        module = Module.objects.get(title=module_title)
+                        modules_advanced.append(module)
+                    except Module.DoesNotExist:
+                        self.stdout.write(self.style.WARNING(f'Modul "{module_title}" nicht gefunden.'))
+                
+                if modules_advanced:
+                    exam_advanced = self._create_exam(
+                        "Python Fortgeschrittene Konzepte", 
+                        duration_weeks=4, 
+                        difficulty="hard", 
+                        description="Vertiefte Aufgaben zu fortgeschrittenen Python-Konzepten und objektorientierter Programmierung.",
+                        modules=modules_advanced
+                    )
+                    
+                    # Bewertungskriterien
+                    self._create_exam_criterion(exam_advanced, "OOP Design", "Objektorientiertes Design und Klassenstruktur", 30)
+                    self._create_exam_criterion(exam_advanced, "Funktionale Konzepte", "Verwendung funktionaler Programmiertechniken", 25)
+                    self._create_exam_criterion(exam_advanced, "Fortgeschrittene Features", "Einsatz fortgeschrittener Python-Features", 25)
+                    self._create_exam_criterion(exam_advanced, "Tests & Dokumentation", "Testabdeckung und Dokumentationsqualität", 20)
+                    
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Fehler beim Erstellen der fortgeschrittenen Prüfung: {e}'))
+
+            # Abschließende Bestätigung
+            self.stdout.write(self.style.SUCCESS('\nPrüfungen erfolgreich erstellt!'))
+            
+            # Explizite Bereinigung der Exam-Module-Beziehungen für Prüfungen ohne Voraussetzungen
+            if exam_intro and exam_freestyle:
+                try:
+                    # Methode 1: Django ORM - nochmals explizit leeren
+                    self.stdout.write("Stelle sicher, dass Prüfungen ohne Voraussetzungen wirklich keine Module haben...")
+                    exam_intro.modules.clear()
+                    exam_freestyle.modules.clear()
+                    
+                    # Methode 2: Direktes SQL für Sicherheit
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        # Finde den Tabellennamen der Many-to-Many-Beziehung
+                        table_name = Exam.modules.through._meta.db_table
+                        # Lösche alle Einträge für die beiden Prüfungen ohne Voraussetzungen
+                        cursor.execute(f"""
+                            DELETE FROM {table_name} 
+                            WHERE exam_id IN (%s, %s)
+                        """, [exam_intro.id, exam_freestyle.id])
+                        affected_rows = cursor.rowcount
+                        self.stdout.write(self.style.SUCCESS(f"SQL-Bereinigung: {affected_rows} Modulzuweisungen entfernt."))
+                    
+                    # Methode 3: Nachprüfung
+                    intro_modules = exam_intro.modules.all()
+                    freestyle_modules = exam_freestyle.modules.all()
+                    if intro_modules.exists():
+                        self.stdout.write(self.style.WARNING(f'WARNUNG: Exam "{exam_intro.title}" hat immer noch Module: {", ".join([m.title for m in intro_modules])}'))
+                    if freestyle_modules.exists():
+                        self.stdout.write(self.style.WARNING(f'WARNUNG: Exam "{exam_freestyle.title}" hat immer noch Module: {", ".join([m.title for m in freestyle_modules])}'))
+                    else:
+                        self.stdout.write(self.style.SUCCESS("Erfolgreich überprüft: Die Prüfungen ohne Voraussetzungen haben jetzt wirklich keine Module."))
+                
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f'Fehler bei der expliziten Bereinigung der Modulzuweisungen: {e}'))
+            
+        else:
+            self.stdout.write(self.style.WARNING('\nÜberspringe Prüfungserstellung, da App nicht verfügbar.'))
+
+        # Abschließende Erfolgsmeldung
+        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully for all Python modules and exams.')) 

@@ -37,6 +37,7 @@ interface LoginResult {
 interface AuthContextType {
   tokens: AuthTokens | null;
   user: DecodedToken | null;
+  isAuthenticated: boolean;
   login: (credentials: {
     username: string;
     password: string;
@@ -93,18 +94,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           console.log(
             "Access token expired on load, attempting refresh or logout needed."
           );
-          // logout() ist jetzt async, aber hier wollen wir nicht unbedingt warten
-          // Es ist vielleicht besser, den Refresh direkt hier oder im Interceptor zu behandeln
-          // Fürs Erste: Token entfernen und User null setzen, der Interceptor sollte den Rest regeln
+          // Token entfernen und User null setzen
           localStorage.removeItem("authTokens");
           setTokens(null);
           setUser(null);
+
+          // Zur Landingpage weiterleiten
+          window.location.href = "/";
         }
       } catch (error) {
         console.error("Error decoding token on initial load:", error);
         localStorage.removeItem("authTokens");
         setTokens(null);
         setUser(null);
+
+        // Auch hier zur Landingpage weiterleiten
+        window.location.href = "/";
       }
     } else {
       setUser(null);
@@ -201,6 +206,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const contextData: AuthContextType = {
     tokens,
     user,
+    isAuthenticated: !!tokens,
     login,
     logout,
     isLoading,
