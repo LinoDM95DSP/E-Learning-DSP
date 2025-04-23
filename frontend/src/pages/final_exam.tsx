@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
@@ -11,8 +10,10 @@ import {
   IoWarningOutline,
   IoCheckmarkDoneOutline,
   IoCloseOutline,
+  IoInformationCircleOutline,
 } from "react-icons/io5";
 import { useExams, Exam, ExamAttempt } from "../context/ExamContext";
+import PopupExamOverview from "../components/pop_ups/popup_exam_overview";
 
 type TabState = "verfügbar" | "inBearbeitung" | "abgeschlossen";
 
@@ -46,21 +47,31 @@ const formatDate = (dateString: string | null): string => {
   }).format(date);
 };
 
+// Hilfsfunktion zur Begrenzung der Textlänge
+const truncateText = (
+  text: string | undefined,
+  maxLength: number = 111
+): string => {
+  if (!text) return "Keine Beschreibung verfügbar";
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+};
+
 function FinalExam() {
   const [activeTab, setActiveTab] = useState<TabState>("verfügbar");
   const [sliderStyle, setSliderStyle] = useState({});
   const tabsRef = useRef<HTMLDivElement>(null);
-  const [expandedDetails, setExpandedDetails] = useState<
-    Record<string, boolean>
-  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionComment, setSubmissionComment] = useState("");
-  const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [selectedAttemptId, setSelectedAttemptId] = useState<number | null>(
     null
   );
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const navigate = useNavigate();
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [selectedExamForPopup, setSelectedExamForPopup] = useState<Exam | null>(
+    null
+  );
+  const [selectedAttemptForPopup, setSelectedAttemptForPopup] =
+    useState<ExamAttempt | null>(null);
 
   // ExamContext-Daten und Funktionen abrufen
   const {
@@ -73,6 +84,38 @@ function FinalExam() {
     submitExam,
     refreshUserExams,
   } = useExams();
+
+  // DEBUG: Log des ExamContext beim Mount und wenn sich availableExams ändert
+  useEffect(() => {
+    console.log("FinalExam Component: ExamContext Daten geladen:", {
+      availableExamsCount: availableExams.length,
+      activeExamsCount: activeExams.length,
+      completedExamsCount: completedExams.length,
+      loadingStatus: loadingUserExams,
+      errorStatus: errorUserExams,
+    });
+
+    // Detaillierte Ausgabe der verfügbaren Prüfungen
+    if (availableExams.length > 0) {
+      console.log("Verfügbare Prüfungen:", availableExams);
+      console.log("Erste Prüfung:", {
+        id: availableExams[0].id,
+        title: availableExams[0].exam_title,
+        description: availableExams[0].exam_description,
+        difficulty: availableExams[0].exam_difficulty,
+        duration: availableExams[0].exam_duration_week,
+        criteria: availableExams[0].criteria,
+      });
+    } else {
+      console.log("Keine verfügbaren Prüfungen vorhanden");
+    }
+  }, [
+    availableExams,
+    activeExams,
+    completedExams,
+    loadingUserExams,
+    errorUserExams,
+  ]);
 
   // --- Breadcrumb Items ---
   const breadcrumbItems = [
@@ -133,6 +176,7 @@ function FinalExam() {
   const handleStartExam = async (examId: number) => {
     console.log(`Starting exam ${examId}`);
     const result = await startExam(examId);
+    console.log("Prüfung starten Ergebnis:", result);
     if (result) {
       setActiveTab("inBearbeitung");
       await refreshUserExams();
@@ -170,8 +214,29 @@ function FinalExam() {
     }
   };
 
+  // NEU: Handler für Popup
+  const handleOpenPopup = (exam: Exam, attempt?: ExamAttempt) => {
+    console.log("Öffne Popup für:", { exam, attempt });
+    setSelectedExamForPopup(exam);
+    setSelectedAttemptForPopup(attempt || null);
+    setIsPopupOpen(true);
+  };
+
+  const handleClosePopup = () => {
+    setIsPopupOpen(false);
+    setSelectedExamForPopup(null);
+    setSelectedAttemptForPopup(null);
+  };
+
   // Verfügbare Prüfungen rendern
   const renderAvailableExams = () => {
+    console.log("RENDER AVAILABLE EXAMS:", {
+      loadingUserExams,
+      errorUserExams,
+      availableExamsCount: availableExams.length,
+      availableExamsData: availableExams,
+    });
+
     if (loadingUserExams) {
       return <div className="text-center py-8">Lädt Prüfungen...</div>;
     }
@@ -192,51 +257,82 @@ function FinalExam() {
       );
     }
 
+    // Debug: Überprüfen der Datenstruktur der ersten Prüfung
+    if (availableExams.length > 0) {
+      console.log(
+        "First available exam data (JSON):",
+        JSON.stringify(availableExams[0], null, 2)
+      );
+      console.log("First available exam title:", availableExams[0].exam_title);
+    }
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {availableExams.map((exam) => (
-          <div
-            key={exam.id}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col"
-          >
-            <div className="p-6 flex-grow">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-800 leading-tight">
-                  {exam.title}
-                </h3>
-                <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                  {exam.difficulty === "easy"
+        {availableExams.map((exam) => {
+          console.log("Rendering exam item:", exam.id, {
+            title: exam.exam_title,
+            description: exam.exam_description,
+            difficulty: exam.exam_difficulty,
+            duration_weeks: exam.exam_duration_week,
+          });
+
+          if (!exam.exam_title) {
+            console.warn("ACHTUNG: Prüfung hat keinen Titel!", exam);
+          }
+
+          return (
+            <div
+              key={exam.id}
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col"
+            >
+              <div className="p-6 flex-grow">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800 leading-tight mr-2">
+                    {exam.exam_title || "Titel nicht verfügbar"}
+                  </h3>
+                  <button
+                    onClick={() => handleOpenPopup(exam)}
+                    className="text-gray-400 hover:text-dsp-orange p-1 rounded-full transition-colors -mt-1 -mr-1 cursor-pointer"
+                    aria-label="Details anzeigen"
+                  >
+                    <IoInformationCircleOutline size={20} />
+                  </button>
+                </div>
+                <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full inline-block mb-3">
+                  {exam.exam_difficulty === "easy"
                     ? "Einfach"
-                    : exam.difficulty === "medium"
+                    : exam.exam_difficulty === "medium"
                     ? "Mittel"
                     : "Schwer"}
                 </span>
+                <p className="text-sm text-gray-600 mb-4 flex-grow">
+                  {truncateText(exam.exam_description)}
+                </p>
+                <div className="flex items-center text-sm text-gray-500 mb-2">
+                  <IoTimeOutline className="mr-2" /> {exam.exam_duration_week}{" "}
+                  {exam.exam_duration_week === 1 ? "Woche" : "Wochen"}
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <IoStarOutline className="mr-2" />{" "}
+                  {exam.criteria && exam.criteria.length > 0
+                    ? exam.criteria.reduce(
+                        (sum, criterion) => sum + criterion.max_points,
+                        0
+                      )
+                    : "?"}{" "}
+                  Punkte
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mb-4 flex-grow">
-                {exam.description}
-              </p>
-              <div className="flex items-center text-sm text-gray-500 mb-2">
-                <IoTimeOutline className="mr-2" /> {exam.duration_weeks}{" "}
-                {exam.duration_weeks === 1 ? "Woche" : "Wochen"}
-              </div>
-              <div className="flex items-center text-sm text-gray-500">
-                <IoStarOutline className="mr-2" />{" "}
-                {exam.criteria.reduce(
-                  (sum, criterion) => sum + criterion.max_points,
-                  0
-                )}{" "}
-                Punkte
+              <div className="bg-gray-50 p-4 border-t border-gray-200">
+                <ButtonPrimary
+                  title="Prüfung starten"
+                  classNameButton="w-full text-sm"
+                  onClick={() => handleStartExam(exam.id)}
+                />
               </div>
             </div>
-            <div className="bg-gray-50 p-4 border-t border-gray-200">
-              <ButtonPrimary
-                title="Prüfung starten"
-                classNameButton="w-full text-sm"
-                onClick={() => handleStartExam(exam.id)}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -263,6 +359,8 @@ function FinalExam() {
       );
     }
 
+    console.log("Aktive Prüfungen:", activeExams);
+
     return (
       <div className="space-y-6">
         {activeExams.map((attempt) => (
@@ -272,12 +370,21 @@ function FinalExam() {
           >
             <div className="p-6">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                    {attempt.exam.title}
-                  </h3>
+                <div className="flex-grow mr-4">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                      {attempt.exam.exam_title}
+                    </h3>
+                    <button
+                      onClick={() => handleOpenPopup(attempt.exam, attempt)}
+                      className="text-gray-400 hover:text-dsp-orange p-1 rounded-full transition-colors -mt-1 flex-shrink-0 cursor-pointer"
+                      aria-label="Details anzeigen"
+                    >
+                      <IoInformationCircleOutline size={20} />
+                    </button>
+                  </div>
                   <p className="text-sm text-gray-600">
-                    {attempt.exam.description}
+                    {truncateText(attempt.exam.exam_description)}
                   </p>
                 </div>
                 <div className="mt-3 sm:mt-0 sm:ml-4 text-sm text-gray-500 flex-shrink-0">
@@ -357,13 +464,10 @@ function FinalExam() {
     );
   };
 
-  // Toggle für Detailanzeige
-  const toggleDetails = (examId: string) => {
-    setExpandedDetails((prev) => ({ ...prev, [examId]: !prev[examId] }));
-  };
-
   // Abgeschlossene Prüfungen rendern
   const renderCompletedExams = () => {
+    console.log("Abgeschlossene Prüfungen:", completedExams);
+
     if (loadingUserExams) {
       return <div className="text-center py-8">Lädt Prüfungen...</div>;
     }
@@ -391,16 +495,13 @@ function FinalExam() {
             key={attempt.id}
             className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
           >
-            <div
-              className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => toggleDetails(attempt.id.toString())}
-            >
-              <div className="mb-3 sm:mb-0">
+            <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="mb-3 sm:mb-0 flex-grow mr-4">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {attempt.exam.title}
+                  {attempt.exam.exam_title}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {attempt.exam.description}
+                  {truncateText(attempt.exam.exam_description)}
                 </p>
               </div>
               <div className="flex items-center space-x-4 flex-shrink-0">
@@ -425,115 +526,15 @@ function FinalExam() {
                     )}
                   </div>
                 )}
-                <svg
-                  className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
-                    expandedDetails[attempt.id.toString()] ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+                <button
+                  onClick={() => handleOpenPopup(attempt.exam, attempt)}
+                  className="text-gray-400 hover:text-dsp-orange p-1 rounded-full transition-colors cursor-pointer"
+                  aria-label="Details anzeigen"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
-                </svg>
+                  <IoInformationCircleOutline size={20} />
+                </button>
               </div>
             </div>
-
-            {/* Expanded Details Section */}
-            {expandedDetails[attempt.id.toString()] && (
-              <div className="border-t border-gray-200 bg-gray-50/50 p-4 sm:p-6">
-                <h4 className="text-md font-semibold text-gray-700 mb-3">
-                  Detailübersicht
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    <div className="font-medium text-gray-500 mb-1">
-                      Bearbeitungszeit
-                    </div>
-                    <div className="text-gray-800">
-                      {attempt.processing_time_days
-                        ? `${attempt.processing_time_days} ${
-                            attempt.processing_time_days === 1 ? "Tag" : "Tage"
-                          }`
-                        : "Unbekannt"}
-                      (Erlaubt: {attempt.exam.duration_weeks}{" "}
-                      {attempt.exam.duration_weeks === 1 ? "Woche" : "Wochen"})
-                    </div>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    <div className="font-medium text-gray-500 mb-1">
-                      Abgabezeitpunkt
-                    </div>
-                    <div className="text-gray-800">
-                      {attempt.submitted_at
-                        ? formatDate(attempt.submitted_at)
-                        : "Unbekannt"}
-                    </div>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    <div className="font-medium text-gray-500 mb-1">Status</div>
-                    <div className="font-semibold text-gray-800">
-                      {attempt.status === "graded"
-                        ? "Bewertet"
-                        : attempt.status === "submitted"
-                        ? "Abgegeben"
-                        : "In Bearbeitung"}
-                    </div>
-                  </div>
-                </div>
-
-                {attempt.criterion_scores &&
-                  attempt.criterion_scores.length > 0 && (
-                    <>
-                      <h4 className="text-md font-semibold text-gray-700 mt-4 mb-3">
-                        Punkte nach Kriterium
-                      </h4>
-                      <div className="space-y-2">
-                        {attempt.criterion_scores.map((score) => (
-                          <div
-                            key={score.id}
-                            className="flex justify-between items-center bg-white p-2 rounded border border-gray-100 shadow-sm text-sm"
-                          >
-                            <span className="text-gray-600">
-                              {score.criterion.title}
-                            </span>
-                            <span className="font-medium text-gray-800">
-                              {score.achieved_points}/
-                              {score.criterion.max_points}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                {attempt.feedback && (
-                  <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-700 mb-2">
-                      Feedback
-                    </h4>
-                    <div className="bg-white p-3 rounded border border-gray-100 shadow-sm text-gray-800 text-sm">
-                      {attempt.feedback}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 flex justify-end">
-                  <ButtonSecondary
-                    title="Feedback anfordern"
-                    classNameButton="text-sm"
-                    onClick={() =>
-                      console.log(`Requesting feedback for ${attempt.id}`)
-                    }
-                  />
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -617,6 +618,17 @@ function FinalExam() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Popup rendern */}
+        {isPopupOpen && selectedExamForPopup && (
+          <PopupExamOverview
+            exam={selectedExamForPopup}
+            attempt={selectedAttemptForPopup}
+            onClose={handleClosePopup}
+            onStartExam={handleStartExam}
+            onPrepareSubmission={openSubmissionDialog}
+          />
         )}
       </div>
     </div>

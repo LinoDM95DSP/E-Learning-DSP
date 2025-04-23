@@ -6,6 +6,7 @@ import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import CreateUserForm from "../components/ui_elements/forms/create_user_form";
 import * as userAdminApi from "../util/apis/userAdminApi";
 import AdminPanelExamReviewSection from "./admin_panel_exam_review_section";
+import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 
 type TabState = "benutzerliste" | "benutzer-erstellen" | "abschlussprüfungen";
 
@@ -28,6 +29,9 @@ const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabState>("benutzerliste");
   const [sliderStyle, setSliderStyle] = useState({});
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  // Breadcrumbs-Items
+  const breadcrumbItems = [{ label: "Admin Panel" }];
 
   // Zustandsvariablen für die Benutzer
   const [users, setUsers] = useState<User[]>([]);
@@ -154,14 +158,15 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="p-6 min-h-screen bg-background">
+      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Admin Panel</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Admin Panel</h1>
+        <p className="text-gray-600 mb-6">
           Willkommen im Admin-Bereich. Hier können Sie Benutzer verwalten.
         </p>
       </motion.div>

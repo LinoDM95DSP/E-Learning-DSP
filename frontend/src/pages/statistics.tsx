@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Breadcrumbs from "../components/ui_elements/breadcrumbs";
 import {
   IoCheckmarkCircleOutline,
@@ -7,7 +6,6 @@ import {
   IoTimeOutline,
   IoRibbonOutline,
   IoPeopleOutline,
-  IoStatsChartOutline,
 } from "react-icons/io5";
 import ComingSoonOverlay from "../components/messages/coming_soon_overlay";
 
@@ -143,8 +141,8 @@ const userPosition =
 function Statistics() {
   const [activeTab, setActiveTab] = useState<TabState>("übersicht");
   const [sliderStyle, setSliderStyle] = useState({});
+  const [showOverlay, setShowOverlay] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   const breadcrumbItems = [
     { label: "Dashboard", path: "/dashboard" },
@@ -164,6 +162,22 @@ function Statistics() {
       });
     }
   }, [activeTab]);
+
+  // Automatisch Overlay beim Laden der Seite anzeigen
+  useEffect(() => {
+    // Kurze Verzögerung, damit die Seite zuerst geladen wird
+    const timer = setTimeout(() => {
+      setShowOverlay(true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleOverlayClose = () => {
+    console.log("Overlay geschlossen");
+    setShowOverlay(false);
+    // Keine Navigation zum Dashboard mehr
+  };
 
   const renderTabs = () => (
     <div
@@ -430,43 +444,33 @@ function Statistics() {
     </div>
   );
 
-  // --- Overlay Konfiguration ---
-  const expectedStatsFeatures = [
-    "Interaktive Heatmap deiner Lernaktivität",
-    "Detaillierte Aufschlüsselung der Lerndauer pro Thema",
-    "Vergleich deiner Lerngeschwindigkeit mit dem Durchschnitt",
-    "Personalisierte Empfehlungen basierend auf deinen Daten",
-  ];
-
-  // Handler für das Schließen des Overlays
-  const handleOverlayClose = () => {
-    console.log("Stats overlay closed, navigating to dashboard...");
-    navigate("/dashboard");
-  };
-
   return (
-    <div className="p-6 min-h-screen bg-gray-50 relative">
-      <ComingSoonOverlay
-        daysUntilTarget={60}
-        expectedFeatures={expectedStatsFeatures}
-        onClose={handleOverlayClose}
-      />
-      <div className="opacity-50 pointer-events-none">
-        <Breadcrumbs items={breadcrumbItems} className="mb-6" />
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-2">
-          <IoStatsChartOutline /> Deine Statistik
-        </h1>
-        <p className="text-base text-gray-600 mb-6">
-          Verfolge deinen Lernfortschritt und deine Leistungen.
-        </p>
-        {renderTabs()}
-        <div className="mt-6">
-          {activeTab === "übersicht" && renderUebersicht()}
-          {activeTab === "fortschritt" && renderFortschritt()}
-          {activeTab === "leistung" && renderLeistung()}
-          {activeTab === "vergleich" && renderVergleich()}
-        </div>
+    <div className="p-6 min-h-screen bg-background">
+      <Breadcrumbs items={breadcrumbItems} className="mb-6" />
+      <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+        Deine Statistik
+      </h1>
+      <p className="text-base text-gray-600 mb-6">
+        Verfolge deinen Lernfortschritt und deine Leistungen.
+      </p>
+      {renderTabs()}
+      <div className="mt-6">
+        {activeTab === "übersicht" && renderUebersicht()}
+        {activeTab === "fortschritt" && renderFortschritt()}
+        {activeTab === "leistung" && renderLeistung()}
+        {activeTab === "vergleich" && renderVergleich()}
       </div>
+      {showOverlay && (
+        <ComingSoonOverlay
+          daysUntilTarget={14}
+          expectedFeatures={[
+            "Individueller Lernfortschritt pro Thema",
+            "Stärken- und Schwächenanalyse",
+            "Prüfungsperformance im Vergleich",
+          ]}
+          onClose={handleOverlayClose}
+        />
+      )}
     </div>
   );
 }

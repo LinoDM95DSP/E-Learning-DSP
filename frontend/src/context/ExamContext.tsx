@@ -23,10 +23,10 @@ export interface Module {
 
 export interface Exam {
   id: number;
-  title: string;
-  description: string;
-  difficulty: "easy" | "medium" | "hard";
-  duration_weeks: number;
+  exam_title: string;
+  exam_description: string;
+  exam_difficulty: "easy" | "medium" | "hard";
+  exam_duration_week: number;
   created_at: string;
   updated_at: string;
   modules: Module[];
@@ -175,15 +175,52 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
         api.get("exams/my-exams/completed/"),
       ]);
 
+      console.log(
+        "ExamContext: Verfügbare Prüfungen API-Antwort:",
+        availableRes
+      );
+      console.log(
+        "ExamContext: Verfügbare Prüfungen Daten:",
+        availableRes.data
+      );
+
+      if (availableRes.data && availableRes.data.length > 0) {
+        console.log("ExamContext: Erste verfügbare Prüfung:", {
+          id: availableRes.data[0].id,
+          title: availableRes.data[0].exam_title,
+          beschreibung: availableRes.data[0].exam_description,
+          kompletteDaten: availableRes.data[0],
+        });
+      }
+
       console.log("ExamContext: Daten erhalten:", {
         available: availableRes.data.length,
         active: activeRes.data.length,
         completed: completedRes.data.length,
       });
 
+      // Prüfen, ob Titel in den empfangenen Daten vorhanden sind
+      if (availableRes.data && availableRes.data.length > 0) {
+        const missingTitles = availableRes.data.filter(
+          (exam: Exam) => !exam.exam_title || exam.exam_title === ""
+        );
+        if (missingTitles.length > 0) {
+          console.warn(
+            "ExamContext: WARNUNG - Einige Prüfungen haben keinen Titel:",
+            missingTitles
+          );
+        }
+      }
+
       setAvailableExams(availableRes.data);
       setActiveExams(activeRes.data);
       setCompletedExams(completedRes.data);
+
+      // Nach dem Setzen der Daten überprüfen, ob die Daten korrekt im State sind
+      console.log(
+        "ExamContext: Gespeicherte verfügbare Prüfungen:",
+        availableExams
+      );
     } catch (error) {
       console.error("Fehler beim Laden der Prüfungsdaten:", error);
       setErrorUserExams(
@@ -203,6 +240,7 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
 
     try {
       const response = await api.get("exams/teacher/submissions/");
+      console.log("ExamContext: Lehrer-Submissions geladen:", response.data);
       setTeacherSubmissions(response.data);
     } catch (error) {
       console.error("Fehler beim Laden der Lehrer-Ansicht:", error);
@@ -219,8 +257,10 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     if (!isAuthenticated) return null;
 
     try {
+      console.log(`ExamContext: Starte Prüfung mit ID ${examId}`);
       // POST-Anfrage zum Starten einer Prüfung
       const response = await api.post(`exams/${examId}/start/`);
+      console.log("ExamContext: Prüfung starten - Antwort:", response.data);
 
       // Daten aktualisieren
       await refreshUserExams();
@@ -239,6 +279,7 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     if (!isAuthenticated) return false;
 
     try {
+      console.log(`ExamContext: Reiche Prüfungsversuch ${attemptId} ein`);
       let formData: FormData | null = null;
 
       // Wenn Anhänge vorhanden sind, FormData für Multipart-Request verwenden
@@ -253,11 +294,16 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
       }
 
       // POST-Anfrage zum Abgeben einer Prüfung
-      await api.post(`exams/attempts/${attemptId}/submit/`, formData, {
-        headers: formData
-          ? { "Content-Type": "multipart/form-data" }
-          : undefined,
-      });
+      const response = await api.post(
+        `exams/attempts/${attemptId}/submit/`,
+        formData,
+        {
+          headers: formData
+            ? { "Content-Type": "multipart/form-data" }
+            : undefined,
+        }
+      );
+      console.log("ExamContext: Prüfung abgeben - Antwort:", response.data);
 
       // Daten aktualisieren
       await refreshUserExams();
@@ -277,11 +323,19 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     if (!isAuthenticated || !user?.is_staff) return false;
 
     try {
+      console.log(`ExamContext: Bewerte Prüfungsversuch ${attemptId}`);
       // POST-Anfrage zum Bewerten einer Prüfung
-      await api.post(`exams/teacher/submissions/${attemptId}/grade/`, {
+      const payload = {
         criterion_scores: scores,
         feedback,
-      });
+      };
+      console.log("ExamContext: Bewertungsdaten:", payload);
+
+      const response = await api.post(
+        `exams/teacher/submissions/${attemptId}/grade/`,
+        payload
+      );
+      console.log("ExamContext: Prüfung bewerten - Antwort:", response.data);
 
       // Daten aktualisieren
       await refreshTeacherData();
@@ -295,12 +349,25 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
 
   // Refresh-Funktionen
   const refreshUserExams = async () => {
+    console.log("ExamContext: Aktualisiere Benutzerdaten");
     await fetchUserExams();
   };
 
   const refreshTeacherData = async () => {
+    console.log("ExamContext: Aktualisiere Lehrer-Daten");
     await fetchTeacherSubmissions();
   };
+
+  // Effect zum Aktualisieren der State-Daten
+  useEffect(() => {
+    if (availableExams.length > 0) {
+      console.log("ExamContext: availableExams wurden aktualisiert:", {
+        anzahl: availableExams.length,
+        erstesPruefungsID: availableExams[0]?.id,
+        erstesPruefungsTitel: availableExams[0]?.exam_title,
+      });
+    }
+  }, [availableExams]);
 
   // Initialer Datenload und Reaktion auf Auth-Änderungen
   useEffect(() => {
