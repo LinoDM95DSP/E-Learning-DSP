@@ -59,7 +59,7 @@ class ModuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Module
-        fields = ['id', 'title', 'is_public', 'contents', 'tasks']
+        fields = ['id', 'title', 'category', 'is_public', 'contents', 'tasks']
 
 class UserSpecificModuleSerializer(serializers.ModelSerializer):
     """ Detaillierter Modul Serializer mit User-Fortschritt. """
@@ -73,7 +73,7 @@ class UserSpecificModuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Module
         fields = [
-            'id', 'title', 'is_user_accessible',
+            'id', 'title', 'category', 'is_user_accessible',
             # 'user_progress_percent', # Entfernt
             'contents', 'tasks'
         ]

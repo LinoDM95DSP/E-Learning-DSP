@@ -16,9 +16,20 @@ export interface Criterion {
   max_points: number;
 }
 
+// NEU: Interface für Prüfungsanforderungen
+export interface ExamRequirement {
+  id: number;
+  description: string;
+  order: number;
+}
+
 export interface Module {
   id: number;
   title: string;
+  updated_at: string;
+  modules: Module[];
+  criteria: Criterion[];
+  requirements: ExamRequirement[]; // NEU: Anforderungen hinzufügen
 }
 
 export interface Exam {
@@ -67,6 +78,11 @@ interface ExamContextType {
   loadingUserExams: boolean;
   errorUserExams: string | null;
 
+  // NEU: Alle Prüfungen (für Übersichtstab)
+  allExams: Exam[];
+  loadingAllExams: boolean;
+  errorAllExams: string | null;
+
   // Teacher-bezogene Daten
   teacherSubmissions: ExamAttempt[];
   loadingTeacherData: boolean;
@@ -92,6 +108,11 @@ const defaultContextValue: ExamContextType = {
   completedExams: [],
   loadingUserExams: false,
   errorUserExams: null,
+
+  // NEU: Default-Werte für alle Prüfungen
+  allExams: [],
+  loadingAllExams: false,
+  errorAllExams: null,
 
   // Teacher-bezogene Daten
   teacherSubmissions: [],
@@ -147,6 +168,11 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
   const [completedExams, setCompletedExams] = useState<ExamAttempt[]>([]);
   const [loadingUserExams, setLoadingUserExams] = useState<boolean>(false);
   const [errorUserExams, setErrorUserExams] = useState<string | null>(null);
+
+  // NEU: State für alle Prüfungen
+  const [allExams, setAllExams] = useState<Exam[]>([]);
+  const [loadingAllExams, setLoadingAllExams] = useState<boolean>(false);
+  const [errorAllExams, setErrorAllExams] = useState<string | null>(null);
 
   // State für Teacher-bezogene Daten
   const [teacherSubmissions, setTeacherSubmissions] = useState<ExamAttempt[]>(
@@ -228,6 +254,33 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
       );
     } finally {
       setLoadingUserExams(false);
+    }
+  };
+
+  // NEU: API-Anfrage für ALLE Prüfungen
+  const fetchAllExams = async () => {
+    if (!isAuthenticated) return; // Nur für eingeloggte User relevant?
+
+    console.log("ExamContext: Starte Abruf ALLER Prüfungen");
+    setLoadingAllExams(true);
+    setErrorAllExams(null);
+
+    try {
+      // Annahme: Endpunkt /api/exams/all/ existiert oder wird erstellt
+      const response = await api.get("exams/all/");
+      console.log("ExamContext: Alle Prüfungen API-Antwort:", response);
+      setAllExams(response.data);
+      console.log(
+        "ExamContext: Alle Prüfungen Daten gesetzt:",
+        response.data.length
+      );
+    } catch (error) {
+      console.error("Fehler beim Laden aller Prüfungen:", error);
+      setErrorAllExams(
+        "Die Liste aller Prüfungen konnte nicht geladen werden."
+      );
+    } finally {
+      setLoadingAllExams(false);
     }
   };
 
@@ -379,6 +432,8 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     );
     if (isAuthenticated) {
       fetchUserExams();
+      // NEU: Auch alle Prüfungen laden
+      fetchAllExams();
 
       if (user?.is_staff) {
         console.log("ExamContext: Benutzer ist Staff, lade auch Teacher-Daten");
@@ -390,6 +445,8 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
       setAvailableExams([]);
       setActiveExams([]);
       setCompletedExams([]);
+      // NEU: Auch alle Prüfungen zurücksetzen
+      setAllExams([]);
       setTeacherSubmissions([]);
     }
   }, [isAuthenticated, user]); // Direkte Abhängigkeit vom Auth-Status
@@ -402,6 +459,11 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     completedExams,
     loadingUserExams,
     errorUserExams,
+
+    // NEU: Alle Prüfungen bereitstellen
+    allExams,
+    loadingAllExams,
+    errorAllExams,
 
     // Teacher-bezogene Daten
     teacherSubmissions,

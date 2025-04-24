@@ -40,6 +40,7 @@ export interface Content {
 export interface Module {
   id: number;
   title: string;
+  category: string;
   is_public: boolean;
   contents?: Content[];
   tasks?: Task[];

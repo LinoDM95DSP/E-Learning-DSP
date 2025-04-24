@@ -1,12 +1,16 @@
 import logging
+import random # Import random for selecting modules
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from datetime import timedelta # timedelta hinzufügen
+from django.utils import timezone # timezone hinzufügen
+from decimal import Decimal, ROUND_HALF_UP # Import Decimal
 # Corrected import path assuming models.py is in the parent 'modules' directory
-from ...models import Module, Content, Task, SupplementaryContent
+from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress # UserTaskProgress importieren
 from django.contrib.auth.models import User # Import User model
 # Import von Exam-Modellen
 try:
-    from final_exam.models import Exam, ExamCriterion
+    from final_exam.models import Exam, ExamCriterion, ExamRequirement, ExamAttempt, CriterionScore, ExamDifficulty # ExamDifficulty hinzugefügt
     EXAMS_AVAILABLE = True
 except ImportError:
     EXAMS_AVAILABLE = False
@@ -15,19 +19,124 @@ except ImportError:
 # Configure logger
 logger = logging.getLogger(__name__)
 
-class Command(BaseCommand):
-    help = 'Cleans and seeds the database with test data for Python modules and exams.' # Updated help text
+# Helper list for plausible module titles - WIRD JETZT DURCH DICT ERSETZT
+# PLAUSIBLE_MODULE_TITLES = [...] # Alte Liste
 
-    def _create_module(self, title, is_public=True):
+# NEU: Zuordnung von Titeln zu Kategorien - Zugriff über Module.
+MODULE_CATEGORIES_MAP = {
+    # Python
+    "Python Grundlagen": Module.ModuleCategory.PYTHON,
+    "Python Datenstrukturen": Module.ModuleCategory.PYTHON,
+    "Python Kontrollfluss": Module.ModuleCategory.PYTHON,
+    "Python Funktionen Deep Dive": Module.ModuleCategory.PYTHON,
+    "OOP in Python": Module.ModuleCategory.PYTHON,
+    "Python Module und Pakete": Module.ModuleCategory.PYTHON,
+    "Fehlerbehandlung in Python": Module.ModuleCategory.PYTHON,
+    "Dateiverarbeitung in Python": Module.ModuleCategory.PYTHON,
+    "Python Standardbibliothek Highlights": Module.ModuleCategory.PYTHON,
+    "List Comprehensions & Generators": Module.ModuleCategory.PYTHON,
+    "Testing in Python (unittest, pytest)": Module.ModuleCategory.DEVOPS,
+
+    # Web Development
+    "HTML Grundlagen": Module.ModuleCategory.WEB_DEV,
+    "CSS Grundlagen": Module.ModuleCategory.WEB_DEV,
+    "CSS Flexbox & Grid": Module.ModuleCategory.WEB_DEV,
+    "JavaScript Basics": Module.ModuleCategory.WEB_DEV,
+    "DOM Manipulation": Module.ModuleCategory.WEB_DEV,
+    "Asynchrones JavaScript (Promises, async/await)": Module.ModuleCategory.WEB_DEV,
+    "React Grundlagen": Module.ModuleCategory.WEB_DEV,
+    "React State Management (useState, useContext)": Module.ModuleCategory.WEB_DEV,
+    "React Routing (React Router)": Module.ModuleCategory.WEB_DEV,
+    "React Fortgeschrittene Hooks": Module.ModuleCategory.WEB_DEV,
+    "Next.js Einführung": Module.ModuleCategory.WEB_DEV,
+    "Next.js App Router": Module.ModuleCategory.WEB_DEV,
+    "Django Grundlagen": Module.ModuleCategory.WEB_DEV,
+    "Django Models & ORM": Module.ModuleCategory.WEB_DEV,
+    "Django Views & Templates": Module.ModuleCategory.WEB_DEV,
+    "Django Forms": Module.ModuleCategory.WEB_DEV,
+    "Django REST Framework Basics": Module.ModuleCategory.WEB_DEV,
+    "API Design Principles": Module.ModuleCategory.WEB_DEV,
+    "Flask Einführung": Module.ModuleCategory.SONSTIGES,
+
+    # Data Science & Analysis
+    "Datenanalyse mit NumPy": Module.ModuleCategory.DATA_SCIENCE,
+    "Datenanalyse mit Pandas": Module.ModuleCategory.DATA_SCIENCE,
+    "Datenvisualisierung mit Matplotlib": Module.ModuleCategory.DATA_SCIENCE,
+    "Datenvisualisierung mit Seaborn": Module.ModuleCategory.DATA_SCIENCE,
+    "Einführung in Machine Learning": Module.ModuleCategory.DATA_SCIENCE,
+    "Scikit-learn Grundlagen": Module.ModuleCategory.DATA_SCIENCE,
+
+    # DevOps & Tools
+    "Git Grundlagen": Module.ModuleCategory.DEVOPS,
+    "Docker Einführung": Module.ModuleCategory.DEVOPS,
+    "Linux Kommandozeile Basics": Module.ModuleCategory.DEVOPS,
+    "Datenbanken Grundlagen (SQL)": Module.ModuleCategory.DEVOPS,
+}
+
+# Helper list for plausible exam titles
+PLAUSIBLE_EXAM_TITLES = [
+    "Webshop Backend Implementierung (Django)", "Interaktives Dashboard (React)", "Datenanalyse-Pipeline (Pandas)",
+    "REST API Entwicklung (DRF)", "Algorithmen-Challenge", "Full-Stack Blog-Anwendung (Next.js/Django)",
+    "Machine Learning Modell Training", "Automatisierte Testsuite", "Cloud Deployment Aufgabe",
+    "System Design Interview Simulation", "CSS Layout-Masterclass", "JavaScript DOM-Projekt",
+    "Datenbank-Modellierungsaufgabe", "Sicherheitsüberprüfung einer Webanwendung", "Python Code-Refactoring Aufgabe",
+    "API-Integration Projekt", "Asynchrone Datenverarbeitung", "Flask Microservice", "NumPy Performance-Optimierung",
+    "React Native App Prototyp"
+]
+
+# Helper list for plausible requirements
+PLAUSIBLE_REQUIREMENTS = [
+    "Implementiere die angegebene Funktionalität vollständig.",
+    "Schreibe sauberen, lesbaren und gut dokumentierten Code.",
+    "Halte dich an gängige Best Practices und Coding Conventions (z.B. PEP 8 für Python).",
+    "Erstelle Unit-Tests für kritische Komponenten mit ausreichender Code Coverage.",
+    "Nutze das vorgegebene Framework/die Bibliothek effektiv.",
+    "Achte auf eine sinnvolle Projektstruktur.",
+    "Behandle mögliche Fehlerfälle robust.",
+    "Optimiere den Code hinsichtlich Performance (falls relevant).",
+    "Erstelle eine verständliche README-Datei zur Einrichtung und Ausführung.",
+    "Versioniere deinen Code mit Git und erstelle aussagekräftige Commit-Messages."
+]
+
+# Helper list for plausible criteria
+PLAUSIBLE_CRITERIA = [
+    ("Funktionalität", "Korrekte Umsetzung aller Anforderungen", 30),
+    ("Code-Qualität", "Lesbarkeit, Struktur, Kommentare, PEP 8", 20),
+    ("Testing", "Qualität und Abdeckung der Unit-Tests", 15),
+    ("Konzept/Architektur", "Sinnvoller Aufbau, Nutzung von Design Patterns", 15),
+    ("Dokumentation", "README, API-Dokumentation, Kommentare", 10),
+    ("Effizienz/Performance", "Laufzeitverhalten, Speicherverbrauch (falls relevant)", 10)
+]
+
+class Command(BaseCommand):
+    help = 'Cleans and seeds the database with extensive test data for Python modules and exams.' # Updated help text
+
+    # Passe _create_module an, um Kategorie zu akzeptieren
+    def _create_module(self, title, category, is_public=True):
         module, created = Module.objects.get_or_create(
             title=title,
-            defaults={'is_public': is_public}
+            defaults={
+                'is_public': is_public,
+                'category': category # Füge Kategorie zu Defaults hinzu
+            }
         )
+        tasks = []
         if created:
-            self.stdout.write(self.style.SUCCESS(f'Created Module: "{title}"'))
-        else:
-            self.stdout.write(f'Module "{title}" already exists.')
-        return module
+            # self.stdout.write(self.style.SUCCESS(f'Created Module: "{title}"')) # Weniger Output
+            # Immer 1-3 simple Tasks für neue Module hinzufügen
+            num_tasks = random.randint(1, 3)
+            for i in range(num_tasks):
+                task_title = f"Aufgabe {i+1}: Print-Ausgabe ({title[:20]}...)"
+                task_desc = f"Schreibe eine Python-Funktion `task_{i+1}()`, die den String 'Modul: {title}, Aufgabe {i+1}' ausgibt."
+                test_path = f"task_tests/common/test_print_task.py" # Generischer Pfad
+                difficulty = random.choice(Task.Difficulty.choices)[0]
+                hint = "Benutze die print()-Funktion."
+                task = self._create_task(module, task_title, task_desc, difficulty, test_path, i+1, hint)
+                tasks.append(task)
+        # Wenn Modul schon existierte, hole seine Tasks
+        if not tasks:
+            tasks = list(module.tasks.all())
+        return module, tasks
 
     def _create_content(self, module, title, description, order, video_url=None, supplementary_title=None):
         content, created = Content.objects.get_or_create(
@@ -36,14 +145,14 @@ class Command(BaseCommand):
             defaults={
                 'description': description,
                 'order': order,
-                'video_url': video_url,
+                'video_url': video_url or f'https://www.youtube.com/watch?v=example_{random.randint(1000, 9999)}', # Placeholder video
                 'supplementary_title': supplementary_title
             }
         )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'  - Created Content: "{title}"'))
-        else:
-            self.stdout.write(f'  - Content "{title}" already exists.')
+        # if created:
+        #     self.stdout.write(self.style.SUCCESS(f'  - Created Content: "{title}"'))
+        # else:
+        #     self.stdout.write(f'  - Content "{title}" already exists.')
         return content
 
     def _create_task(self, module, title, description, difficulty, test_path, order, hint=None):
@@ -55,32 +164,19 @@ class Command(BaseCommand):
                 'difficulty': difficulty,
                 'test_file_path': test_path,
                 'order': order,
-                'hint': hint
+                'hint': hint or f"Standard-Hinweis für {title}"
             }
         )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'  - Created Task: "{title}" (Tests: {test_path})'))
-        else:
-            self.stdout.write(f'  - Task "{title}" already exists.')
+        # if created:
+        #     self.stdout.write(self.style.SUCCESS(f'  - Created Task: "{title}" (Tests: {test_path})'))
+        # else:
+        #     self.stdout.write(f'  - Task "{title}" already exists.')
         return task
 
-    def _create_supplementary(self, content, label, url, order):
-        sup_content, created = SupplementaryContent.objects.get_or_create(
-            content=content,
-            label=label,
-            url=url,
-            defaults={'order': order}
-        )
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'    - Added Supplementary: "{label}"'))
-        else:
-            self.stdout.write(f'    - Supplementary "{label}" already exists.')
-        return sup_content
-
     # --- Methods for Exam Generation ---
-    def _create_exam(self, title, duration_weeks, difficulty, description, modules=None):
+    def _create_exam(self, title, duration_weeks, difficulty, description, modules=None, requirements=None):
         """
-        Erstellt eine Prüfung mit optionalen Modulvoraussetzungen.
+        Erstellt eine Prüfung mit optionalen Modulvoraussetzungen und Anforderungen.
         """
         if not EXAMS_AVAILABLE:
             self.stdout.write(self.style.WARNING(f'Überspringe Prüfung "{title}": App final_exam nicht verfügbar.'))
@@ -94,24 +190,38 @@ class Command(BaseCommand):
                 'description': description,
             }
         )
+        exam_criteria = []
 
         if created:
-            self.stdout.write(self.style.SUCCESS(f'Prüfung erstellt: "{title}" (Dauer: {duration_weeks} Wochen)'))
-        else:
-            self.stdout.write(f'Prüfung "{title}" existiert bereits.')
+            self.stdout.write(self.style.SUCCESS(f'Prüfung erstellt: "{title}"'))
+        # else:
+            # self.stdout.write(f'Prüfung "{title}" existiert bereits.')
 
-        # Stellen wir sicher, dass keine Module zugewiesen sind, bevor wir neue zuweisen
+        # Module zuweisen (clear existing first)
         exam.modules.clear()
-        
-        # Module zuweisen, falls vorhanden
         if modules:
             exam.modules.set(modules)
-            module_names = ", ".join([m.title for m in modules])
-            self.stdout.write(f'  - Module zugewiesen: {module_names}')
-        else:
-            self.stdout.write(f'  - Keine Module zugewiesen: Diese Prüfung hat keine Voraussetzungen')
-        
-        return exam
+            # self.stdout.write(f'  - Module zugewiesen: {[m.title for m in modules]}')
+
+        # Anforderungen erstellen/aktualisieren (clear existing first)
+        exam.requirements.all().delete()
+        if requirements:
+            for index, req_desc in enumerate(requirements):
+                ExamRequirement.objects.create(
+                    exam=exam,
+                    description=req_desc,
+                    order=index + 1 # Reihenfolge 1-basiert
+                )
+            # self.stdout.write(f'  - {len(requirements)} Anforderungen erstellt.')
+
+        # Kriterien erstellen/aktualisieren (clear existing first)
+        exam.criteria.all().delete()
+        for crit_title, crit_desc, crit_points in PLAUSIBLE_CRITERIA:
+             criterion = self._create_exam_criterion(exam, crit_title, crit_desc, crit_points)
+             if criterion:
+                 exam_criteria.append(criterion)
+
+        return exam, exam_criteria # Return exam and its criteria
 
     def _create_exam_criterion(self, exam, title, description, max_points):
         """
@@ -129,10 +239,10 @@ class Command(BaseCommand):
             }
         )
 
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'  - Kriterium erstellt: "{title}" (max. {max_points} Punkte)'))
-        else:
-            self.stdout.write(f'  - Kriterium "{title}" existiert bereits.')
+        # if created:
+        #     self.stdout.write(self.style.SUCCESS(f'  - Kriterium erstellt: "{title}" ({max_points} Pkt)'))
+        # else:
+        #     self.stdout.write(f'  - Kriterium "{title}" existiert bereits.')
         
         return criterion
 
@@ -141,384 +251,302 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('Starting database cleanup before seeding...'))
 
         # --- Cleanup existing data ---
-        # Zuerst Exam-bezogene Daten löschen, falls die App verfügbar ist
         if EXAMS_AVAILABLE:
             self.stdout.write('Lösche Exam-bezogene Daten...')
-            # Lösche alle Exam-Module-Beziehungen
+            ExamRequirement.objects.all().delete()
+            CriterionScore.objects.all().delete()
+            ExamAttempt.objects.all().delete()
+            ExamCriterion.objects.all().delete()
+            # Clear M2M before deleting Exams
             for exam in Exam.objects.all():
                 exam.modules.clear()
-                self.stdout.write(f'  - Module-Beziehungen für Exam "{exam.title}" gelöscht.')
-            
-            # Bewertungskriterien löschen
-            deleted_count, _ = ExamCriterion.objects.all().delete()
-            self.stdout.write(f'  - Deleted {deleted_count} ExamCriterion objects.')
-            
-            # Prüfungen löschen
-            deleted_count, _ = Exam.objects.all().delete()
-            self.stdout.write(f'  - Deleted {deleted_count} Exam objects.')
-        
-        # Dann die übrigen Module-bezogenen Daten löschen
-        deleted_count, _ = SupplementaryContent.objects.all().delete()
-        self.stdout.write(f'  - Deleted {deleted_count} SupplementaryContent objects.')
-        deleted_count, _ = Content.objects.all().delete()
-        self.stdout.write(f'  - Deleted {deleted_count} Content objects.')
-        deleted_count, _ = Task.objects.all().delete()
-        self.stdout.write(f'  - Deleted {deleted_count} Task objects.')
-        # Keep ModuleAccess and UserTaskProgress data, only delete Modules
-        # If Modules are deleted, related access/progress might be cascaded depending on model definition
-        deleted_count, _ = Module.objects.all().delete()
-        self.stdout.write(f'  - Deleted {deleted_count} Module objects.')
+            Exam.objects.all().delete()
+            self.stdout.write('  - Exam-Daten gelöscht.')
+
+        SupplementaryContent.objects.all().delete()
+        Content.objects.all().delete()
+        UserTaskProgress.objects.all().delete()
+        Task.objects.all().delete()
+        Module.objects.all().delete() # This will cascade delete related Content, Task if configured
+        self.stdout.write('  - Modul-Daten gelöscht.')
+
+        User.objects.filter(username="test").delete()
+        self.stdout.write('  - Test User gelöscht.')
         self.stdout.write(self.style.SUCCESS('Cleanup finished.'))
 
-        # --- Create Test User (remains unchanged) ---
-        self.stdout.write('Creating test user...')
-        test_username = "test"
-        test_password = "test"
-        test_email = "test@test.com"
-        user, created = User.objects.get_or_create(
-            username=test_username,
-            defaults={'email': test_email, 'is_staff': True, 'is_superuser': True}
+        # --- Create Test User ---
+        self.stdout.write('Erstelle Test User...')
+        test_user = User.objects.create_user(
+            username="test",
+            password="test",
+            email="test@test.com",
+            is_staff=True,
+            is_superuser=True
         )
-        if created:
-            user.set_password(test_password)
-            user.save()
-            self.stdout.write(self.style.SUCCESS(f'Successfully created test user "{test_username}"'))
-        else:
-            user.email = test_email
-            user.set_password(test_password)
-            user.save()
-            self.stdout.write(f'Test user "{test_username}" already exists. Password has been reset.')
+        self.stdout.write(self.style.SUCCESS(f'Test User "{test_user.username}" erstellt.'))
 
-        # --- Start Seeding --- 
-        self.stdout.write(self.style.SUCCESS('Starting database seeding for Python modules...'))
+        # --- Create Modules ---
+        self.stdout.write(self.style.SUCCESS('Starting database seeding...'))
+        all_modules = {} # Store module_obj: [task_obj1, ...]
+        # Iteriere über das neue Dictionary
+        for title, category in MODULE_CATEGORIES_MAP.items():
+             # Übergebe die Kategorie an _create_module
+             module_obj, task_objs = self._create_module(title, category)
+             if module_obj:
+                 all_modules[module_obj] = task_objs
+                 # Add some basic content to each module
+                 self._create_content(module_obj, f"Einführung in {title}", f"Grundlegende Konzepte von {title}.", 1)
+                 if len(task_objs) > 0:
+                    self._create_content(module_obj, f"Übungen zu {title}", f"Praktische Aufgaben zum Modul {title}.", 2)
 
-        # ===========================
-        # === Python Grundlagen ===
-        # ===========================
-        module_basics = self._create_module("Python Grundlagen")
+        self.stdout.write(self.style.SUCCESS(f'{len(all_modules)} Module verarbeitet/erstellt.'))
+        module_list = list(all_modules.keys()) # Get a list of module objects
 
-        # --- Content & Tasks for Grundlagen ---
-        c_basics_1 = self._create_content(module_basics, "Einführung: Dein erstes Programm", 'Lerne die Grundlagen von Python und schreibe "Hallo Welt!".', 1, 'https://www.youtube.com/watch?v=example_intro')
-        self._create_task(module_basics, "Aufgabe: Hallo Welt Ausgabe", 'Schreibe eine Funktion `say_hello()`, die "Hallo Welt!" zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_basics/test_hello_world.py", 1, 'Achte auf das Ausrufezeichen.')
-
-        c_basics_2 = self._create_content(module_basics, "Variablen und Datentypen", 'Zahlen (int, float), Strings (str), Booleans (bool).', 2, 'https://www.youtube.com/watch?v=example_vars')
-        self._create_task(module_basics, "Aufgabe: Einfache Addition", 'Schreibe `add_two_numbers(a, b)`, die `a + b` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_basics/test_addition.py", 2, 'Benutze den `+` Operator.')
-        self._create_task(module_basics, "Aufgabe: String Verkettung", 'Schreibe `greet_user(name)`, die `"Hallo, " + name + "!"` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_basics/test_string_concat.py", 3)
-
-        c_basics_3 = self._create_content(module_basics, "Kontrollstrukturen: If/Else", 'Bedingte Anweisungen mit `if`, `elif` und `else`.', 3, 'https://www.youtube.com/watch?v=example_if_else')
-        self._create_task(module_basics, "Aufgabe: Gerade oder Ungerade", 'Schreibe `is_even(number)`, die `True` zurückgibt, wenn `number` gerade ist, sonst `False`.', Task.Difficulty.EASY, "task_tests/module_python_basics/test_even_odd.py", 4, 'Der Modulo-Operator `%` ist nützlich.')
-
-        c_basics_4 = self._create_content(module_basics, "Kontrollstrukturen: Schleifen", 'Wiederholungen mit `for`- und `while`-Schleifen.', 4, 'https://www.youtube.com/watch?v=example_loops')
-        self._create_task(module_basics, "Aufgabe: Summe einer Liste", 'Schreibe `sum_list(numbers)`, die die Summe aller Zahlen in der Liste `numbers` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_basics/test_sum_list.py", 5)
-        self._create_task(module_basics, "Aufgabe: Countdown", 'Schreibe `countdown(start)`, die die Zahlen von `start` bis 1 ausgibt (jede in einer neuen Zeile) und dann "Start!". Verwende `print`.', Task.Difficulty.MEDIUM, "task_tests/module_python_basics/test_countdown.py", 6, 'Eine `while`-Schleife könnte hier passen.')
-
-        c_basics_5 = self._create_content(module_basics, "Einfache Funktionen", 'Funktionen definieren und aufrufen.', 5, 'https://www.youtube.com/watch?v=example_functions')
-        self._create_task(module_basics, "Aufgabe: Max von Drei", 'Schreibe `max_of_three(a, b, c)`, die die größte der drei Zahlen zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_basics/test_max_three.py", 7, 'Verwende `if/elif/else`.')
-
-
-        # ===================================
-        # === Python Datenstrukturen ===
-        # ===================================
-        module_datastruct = self._create_module("Python Datenstrukturen")
-
-        # --- Content & Tasks for Datenstrukturen ---
-        c_ds_1 = self._create_content(module_datastruct, "Listen: Grundlagen & Methoden", 'Erstellen, Indizieren, Slicing, Methoden wie `append`, `insert`, `remove`.', 1, 'https://www.youtube.com/watch?v=example_ds_lists')
-        self._create_task(module_datastruct, "Aufgabe: Liste manipulieren", 'Schreibe `manipulate_list(input_list)`, die das erste Element entfernt, die Zahl 100 am Ende hinzufügt und die Liste zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_datastruct/test_manipulate_list.py", 1)
-
-        c_ds_2 = self._create_content(module_datastruct, "Tupel: Unveränderliche Sequenzen", 'Erstellung, Verwendung und Unterschiede zu Listen.', 2, 'https://www.youtube.com/watch?v=example_ds_tuples')
-        self._create_task(module_datastruct, "Aufgabe: Tupel Entpacken", 'Schreibe `get_coordinates()`, die das Tupel `(10, 25)` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_datastruct/test_get_coordinates.py", 2, 'Tupel werden mit runden Klammern `()` erstellt.')
-
-        c_ds_3 = self._create_content(module_datastruct, "Dictionaries: Key-Value Speicher", 'Erstellen, Zugriff, Methoden wie `keys`, `values`, `items`.', 3, 'https://www.youtube.com/watch?v=example_ds_dicts')
-        self._create_supplementary(c_ds_3, "Python Doku: Dictionaries", "https://docs.python.org/3/tutorial/datastructures.html#dictionaries", 1)
-        self._create_task(module_datastruct, "Aufgabe: Dictionary Zugriff", 'Schreibe `get_capital(country_dict, country)`, die die Hauptstadt aus dem Dict `country_dict` für das Land `country` zurückgibt. Gib `"Unbekannt"` zurück, falls das Land nicht existiert.', Task.Difficulty.MEDIUM, "task_tests/module_python_datastruct/test_get_capital.py", 3, 'Verwende `get()` mit einem Default-Wert.')
-
-        c_ds_4 = self._create_content(module_datastruct, "Sets: Einzigartige Elemente", 'Erstellung, Mengenoperationen (Vereinigung, Schnittmenge, Differenz).', 4, 'https://www.youtube.com/watch?v=example_ds_sets')
-        self._create_task(module_datastruct, "Aufgabe: Eindeutige Elemente finden", 'Schreibe `find_unique(elements)`, die ein Set mit den eindeutigen Elementen aus der Liste `elements` zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_datastruct/test_find_unique.py", 4)
-        self._create_task(module_datastruct, "Aufgabe: Gemeinsame Elemente", 'Schreibe `find_common(list1, list2)`, die ein Set der gemeinsamen Elemente beider Listen zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_datastruct/test_find_common.py", 5, 'Nutze die Schnittmengen-Operation (`&`).')
-
-
-        # ===================================
-        # === Python Fortgeschrittene ===
-        # ===================================
-        module_advanced = self._create_module("Python Fortgeschrittene")
-
-        # --- Content & Tasks for Fortgeschrittene ---
-        c_adv_1 = self._create_content(module_advanced, "List Comprehensions", 'Effiziente Listenerstellung.', 1, 'https://www.youtube.com/watch?v=example_adv_listcomp')
-        self._create_supplementary(c_adv_1, "RealPython: List Comprehensions", "https://realpython.com/list-comprehension-python/", 1)
-        self._create_task(module_advanced, "Aufgabe: Quadratzahlen", 'Erstelle `get_squared_numbers(numbers)` mit List Comprehension.', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_list_comp.py", 1)
-        self._create_task(module_advanced, "Aufgabe: Gerade Zahlen filtern", 'Schreibe `filter_even(numbers)` mit List Comprehension, die nur gerade Zahlen zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_filter_even_comp.py", 2, 'Füge eine `if`-Bedingung hinzu.')
-
-        c_adv_2 = self._create_content(module_advanced, "Funktionen: *args und **kwargs", 'Variable Anzahl von Argumenten.', 2, 'https://www.youtube.com/watch?v=example_adv_args_kwargs')
-        self._create_task(module_advanced, "Aufgabe: Summe mit *args", 'Schreibe `sum_all(*args)`, die die Summe aller übergebenen Argumente zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_sum_args.py", 3)
-
-        c_adv_3 = self._create_content(module_advanced, "Lambda-Ausdrücke", 'Anonyme Funktionen für kurze Operationen.', 3, 'https://www.youtube.com/watch?v=example_adv_lambda')
-        self._create_task(module_advanced, "Aufgabe: Lambda für Sortierung", 'Schreibe `sort_by_age(data)`, die eine Liste von Tupeln `(name, alter)` nach Alter sortiert.', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_lambda_sort.py", 4)
-        self._create_task(module_advanced, "Aufgabe: Einfacher Lambda-Filter", 'Schreibe `filter_positive(numbers)`, die mit `filter()` und Lambda nur positive Zahlen zurückgibt (als Liste).', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_lambda_filter.py", 5)
-
-        c_adv_4 = self._create_content(module_advanced, "Map und Filter", 'Funktionale Programmierungskonzepte.', 4, 'https://www.youtube.com/watch?v=example_adv_map_filter')
-        self._create_task(module_advanced, "Aufgabe: Strings in Großbuchstaben", 'Schreibe `uppercase_strings(strings)`, die `map()` verwendet, um alle Strings in einer Liste in Großbuchstaben umzuwandeln.', Task.Difficulty.MEDIUM, "task_tests/module_python_advanced/test_map_upper.py", 6)
-
-
-        # ========================================================
-        # === Objektorientierte Programmierung (OOP) in Python ===
-        # ========================================================
-        module_oop = self._create_module("OOP in Python")
-
-        # --- Content & Tasks for OOP ---
-        c_oop_1 = self._create_content(module_oop, "Einführung in Klassen und Objekte", 'Konzepte von OOP, Klassen definieren, Instanzen erstellen.', 1, 'https://www.youtube.com/watch?v=example_oop_intro')
-        self._create_task(module_oop, "Aufgabe: Einfache Klasse 'Hund'", 'Definiere eine Klasse `Dog` mit einer `__init__` Methode, die `name` und `breed` setzt, und einer Methode `bark()` die `"Woof!"` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_oop/test_dog_class.py", 1)
-
-        c_oop_2 = self._create_content(module_oop, "Attribute und Methoden", 'Instanzattribute, Klassenattribute, Instanzmethoden, Klassenmethoden, Statische Methoden.', 2, 'https://www.youtube.com/watch?v=example_oop_attrs')
-        self._create_task(module_oop, "Aufgabe: Auto-Klasse mit Methode", 'Definiere `Car` mit `__init__(make, model)` und einer Methode `display_info()` die `"Make: [make], Model: [model]"` zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_oop/test_car_class.py", 2)
-
-        c_oop_3 = self._create_content(module_oop, "Vererbung", 'Klassen erweitern, Methoden überschreiben, `super()`.', 3, 'https://www.youtube.com/watch?v=example_oop_inherit')
-        self._create_task(module_oop, "Aufgabe: Vererbung 'Elektroauto'", 'Erstelle `ElectricCar`, die von `Car` erbt. Füge ein Attribut `battery_size` hinzu und überschreibe `display_info()`, um die Batteriegröße anzuzeigen.', Task.Difficulty.MEDIUM, "task_tests/module_python_oop/test_electric_car.py", 3)
-
-        c_oop_4 = self._create_content(module_oop, "Polymorphie und Duck Typing", 'Flexibles Design durch Polymorphie.', 4, 'https://www.youtube.com/watch?v=example_oop_poly')
-        # Keine direkte Aufgabe, eher ein Konzept
-
-        c_oop_5 = self._create_content(module_oop, "Spezielle Methoden (Magic Methods)", 'Methoden wie `__str__`, `__repr__`, `__len__`.', 5, 'https://www.youtube.com/watch?v=example_oop_magic')
-        self._create_task(module_oop, "Aufgabe: __str__ für Buch", 'Definiere `Book` mit `__init__(title, author)` und implementiere `__str__`, die `"[title] by [author]"` zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_oop/test_book_str.py", 4)
-
-
-        # ======================================
-        # === Dateiverarbeitung in Python ===
-        # ======================================
-        module_files = self._create_module("Dateiverarbeitung in Python")
-
-        # --- Content & Tasks for Files ---
-        c_files_1 = self._create_content(module_files, "Dateien lesen und schreiben", 'Öffnen, Lesen (`read`, `readline`, `readlines`), Schreiben (`write`), `with` Statement.', 1, 'https://www.youtube.com/watch?v=example_files_readwrite')
-        self._create_task(module_files, "Aufgabe: Dateiinhalt lesen", 'Schreibe `read_file_content(filepath)`, die den gesamten Inhalt einer Textdatei liest und zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_files/test_read_file.py", 1, 'Verwende `with open(...)`.')
-
-        self._create_task(module_files, "Aufgabe: In Datei schreiben", 'Schreibe `write_to_file(filepath, text)`, die den `text` in die angegebene Datei schreibt (überschreibt bestehenden Inhalt).', Task.Difficulty.EASY, "task_tests/module_python_files/test_write_file.py", 2)
-
-        c_files_2 = self._create_content(module_files, "Arbeiten mit CSV-Dateien", 'Das `csv`-Modul zum Lesen und Schreiben von CSV-Daten.', 2, 'https://www.youtube.com/watch?v=example_files_csv')
-        self._create_task(module_files, "Aufgabe: CSV lesen", 'Schreibe `read_csv_data(filepath)`, die eine CSV-Datei liest und die Daten als Liste von Dictionaries zurückgibt (Kopfzeile als Keys).', Task.Difficulty.MEDIUM, "task_tests/module_python_files/test_read_csv.py", 3, 'Nutze `csv.DictReader`.')
-
-        c_files_3 = self._create_content(module_files, "Arbeiten mit JSON-Dateien", 'Das `json`-Modul zum Parsen und Erstellen von JSON.', 3, 'https://www.youtube.com/watch?v=example_files_json')
-        self._create_task(module_files, "Aufgabe: JSON laden", 'Schreibe `load_json_data(filepath)`, die JSON-Daten aus einer Datei lädt und als Python-Objekt zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_files/test_load_json.py", 4, 'Nutze `json.load`.')
-        self._create_task(module_files, "Aufgabe: JSON speichern", 'Schreibe `save_json_data(filepath, data)`, die ein Python-Objekt `data` als JSON in eine Datei speichert.', Task.Difficulty.MEDIUM, "task_tests/module_python_files/test_save_json.py", 5, 'Nutze `json.dump`.')
-
-
-        # ====================================
-        # === Fehlerbehandlung in Python ===
-        # ====================================
-        module_errors = self._create_module("Fehlerbehandlung in Python")
-
-        # --- Content & Tasks for Errors ---
-        c_errors_1 = self._create_content(module_errors, "try, except, else, finally", 'Grundlagen der Fehlerbehandlung.', 1, 'https://www.youtube.com/watch?v=example_errors_try_except')
-        self._create_task(module_errors, "Aufgabe: Sichere Division", 'Schreibe `safe_divide(a, b)`, die `a / b` zurückgibt. Fange `ZeroDivisionError` ab und gib in diesem Fall `None` zurück.', Task.Difficulty.EASY, "task_tests/module_python_errors/test_safe_divide.py", 1)
-
-        c_errors_2 = self._create_content(module_errors, "Spezifische Exceptions abfangen", 'Umgang mit verschiedenen Fehlertypen (`TypeError`, `ValueError`, etc.).', 2, 'https://www.youtube.com/watch?v=example_errors_specific')
-        self._create_task(module_errors, "Aufgabe: Zahl konvertieren", 'Schreibe `convert_to_int(value)`, die `value` in einen Integer konvertiert. Fange `ValueError` und `TypeError` ab und gib `None` zurück, falls die Konvertierung fehlschlägt.', Task.Difficulty.MEDIUM, "task_tests/module_python_errors/test_convert_int.py", 2)
-
-        c_errors_3 = self._create_content(module_errors, "Eigene Exceptions erstellen", 'Benutzerdefinierte Fehlerklassen für spezifische Anwendungsfälle.', 3, 'https://www.youtube.com/watch?v=example_errors_custom')
-        self._create_task(module_errors, "Aufgabe: Eigene Exception werfen", 'Definiere eine Exception `InvalidAgeError`. Schreibe `validate_age(age)`, die `InvalidAgeError` wirft, wenn `age` negativ ist.', Task.Difficulty.MEDIUM, "task_tests/module_python_errors/test_custom_exception.py", 3, 'Eigene Exceptions erben typischerweise von `Exception`.')
-
-
-        # ==================================
-        # === Python Standardbibliothek ===
-        # ==================================
-        module_stdlib = self._create_module("Python Standardbibliothek")
-
-        # --- Content & Tasks for StdLib ---
-        c_stdlib_1 = self._create_content(module_stdlib, "Das `os`-Modul", 'Interaktion mit dem Betriebssystem: Dateisystem, Umgebungsvariablen.', 1, 'https://www.youtube.com/watch?v=example_stdlib_os')
-        self._create_task(module_stdlib, "Aufgabe: Aktuelles Verzeichnis", 'Schreibe `get_current_dir()`, die das aktuelle Arbeitsverzeichnis zurückgibt.', Task.Difficulty.EASY, "task_tests/module_python_stdlib/test_get_cwd.py", 1, 'Importiere `os` und verwende `os.getcwd()`.')
-
-        c_stdlib_2 = self._create_content(module_stdlib, "Das `datetime`-Modul", 'Arbeiten mit Datum und Uhrzeit.', 2, 'https://www.youtube.com/watch?v=example_stdlib_datetime')
-        self._create_task(module_stdlib, "Aufgabe: Heutiges Datum", 'Schreibe `get_today_date_str()`, die das heutige Datum als String im Format "YYYY-MM-DD" zurückgibt.', Task.Difficulty.MEDIUM, "task_tests/module_python_stdlib/test_today_date.py", 2, 'Importiere `date` aus `datetime` und verwende `date.today().isoformat()`.')
-
-        c_stdlib_3 = self._create_content(module_stdlib, "Das `json`-Modul (Vertiefung)", 'Umgang mit komplexeren JSON-Strukturen.', 3, 'https://www.youtube.com/watch?v=example_stdlib_json2')
-        # Aufgabe hierfür wäre redundant zu Dateiverarbeitung
-
-        c_stdlib_4 = self._create_content(module_stdlib, "Das `requests`-Modul (Extern)", 'HTTP-Anfragen senden (Installation nötig: `pip install requests`).', 4, 'https://www.youtube.com/watch?v=example_stdlib_requests')
-        self._create_supplementary(c_stdlib_4, "Requests Doku", "https://requests.readthedocs.io/en/latest/", 1)
-        self._create_task(module_stdlib, "Aufgabe: Einfache GET-Anfrage", 'Schreibe `fetch_url_status(url)`, die eine GET-Anfrage an die `url` sendet und den Statuscode der Antwort zurückgibt. (Hinweis: `requests`-Bibliothek wird benötigt).', Task.Difficulty.MEDIUM, "task_tests/module_python_stdlib/test_requests_get.py", 3, 'Importiere `requests` und verwende `requests.get(url).status_code`.')
-
-
-        # ===========================
-        # === Python Profis ===
-        # ===========================
-        module_pro = self._create_module("Python Profis")
-
-        # --- Content & Tasks for Profis ---
-        c_pro_1 = self._create_content(module_pro, "Decorators: Grundlagen", 'Funktionen modifizieren und erweitern.', 1, 'https://www.youtube.com/watch?v=example_pro_decorators')
-        self._create_task(module_pro, "Aufgabe: Einfacher Logging Decorator", 'Schreibe `@log_calls`, der vor Aufruf Name/Args loggt und nachher das Ergebnis.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_logging_decorator.py", 1)
-        self._create_task(module_pro, "Aufgabe: Timing Decorator", 'Schreibe `@time_it`, der die Ausführungszeit einer Funktion misst und ausgibt.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_timing_decorator.py", 2, 'Verwende das `time`-Modul.')
-
-        c_pro_2 = self._create_content(module_pro, "Generators und Iterators", 'Speichereffiziente Datenverarbeitung.', 2, 'https://www.youtube.com/watch?v=example_pro_generators')
-        self._create_task(module_pro, "Aufgabe: Fibonacci Generator", 'Implementiere `fibonacci_generator(limit=None)`.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_fibonacci_generator.py", 3)
-        self._create_task(module_pro, "Aufgabe: Eigener Iterator (Countdown)", 'Erstelle eine Klasse `CountdownIterator`, die von einer Zahl herunterzählt.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_countdown_iterator.py", 4, 'Implementiere `__iter__` und `__next__`.')
-
-        c_pro_3 = self._create_content(module_pro, "Context Managers (`with`)", 'Ressourcenmanagement mit `__enter__` und `__exit__`.', 3, 'https://www.youtube.com/watch?v=example_pro_context')
-        self._create_task(module_pro, "Aufgabe: Einfacher Context Manager", 'Erstelle eine Klasse `TimerContext`, die beim Betreten die Zeit misst und beim Verlassen die vergangene Zeit ausgibt.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_timer_context.py", 5)
-
-        c_pro_4 = self._create_content(module_pro, "Metaklassen (Einführung)", 'Klassen zur Laufzeit erstellen und modifizieren (fortgeschritten).', 4, 'https://www.youtube.com/watch?v=example_pro_metaclass')
-        # Keine Aufgabe, da sehr fortgeschritten
-
-        c_pro_5 = self._create_content(module_pro, "Asynchrone Programmierung (async/await)", 'Grundlagen von `asyncio` für nebenläufige Operationen.', 5, 'https://www.youtube.com/watch?v=example_pro_async')
-        self._create_supplementary(c_pro_5, "RealPython: Async IO", "https://realpython.com/async-io-python/", 1)
-        self._create_task(module_pro, "Aufgabe: Einfache asynchrone Funktion", 'Schreibe eine `async def fetch_data(url)` die (simuliert) Daten abruft, indem sie 1 Sekunde wartet (`asyncio.sleep(1)`) und einen Dummy-String zurückgibt.', Task.Difficulty.HARD, "task_tests/module_python_pro/test_async_fetch.py", 6, 'Importiere `asyncio`.')
-
-
-        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully for all Python modules.'))
-
-        # ==========================================
-        # === Prüfungen (Exam Seed Data) =========
-        # ==========================================
+        # --- Create Exams ---
         if EXAMS_AVAILABLE:
-            self.stdout.write(self.style.SUCCESS('\nStarte mit dem Erstellen von Prüfungen...'))
+            self.stdout.write(f'Erstelle 20 Prüfungen...')
+            all_exams = {} # Store exam_obj: [criterion_obj1, ...]
+            created_exam_titles = set() # To avoid duplicate titles if PLAUSIBLE_EXAM_TITLES has duplicates
 
-            # --- Prüfungen ohne Modulvoraussetzungen ---
-            self.stdout.write('\n--- Prüfungen ohne Modulvoraussetzungen ---')
-            
-            # Einfache Einstiegsprüfung ohne Voraussetzungen
-            exam_intro = self._create_exam(
-                "Python Einsteiger-Quiz", 
-                duration_weeks=1, 
-                difficulty="easy", 
-                description="Ein einfaches Quiz für Python-Einsteiger. Keine Vorkenntnisse erforderlich."
-            )
-            
-            # Bewertungskriterien hinzufügen
-            self._create_exam_criterion(exam_intro, "Grundlegende Konzepte", "Verständnis der Python-Grundlagen", 40)
-            self._create_exam_criterion(exam_intro, "Syntax", "Korrekte Syntax und Ausdrucksweise", 30)
-            self._create_exam_criterion(exam_intro, "Dokumentation", "Klarheit und Vollständigkeit der Erklärungen", 30)
-
-            # Fortgeschrittene Prüfung ohne Voraussetzungen
-            exam_freestyle = self._create_exam(
-                "Freestyle Programmieraufgabe", 
-                duration_weeks=2, 
-                difficulty="medium", 
-                description="Entwickle ein eigenständiges Python-Programm zu einem selbstgewählten Thema. Kreativität und sauberer Code sind wichtig."
-            )
-            
-            # Bewertungskriterien hinzufügen
-            self._create_exam_criterion(exam_freestyle, "Code-Qualität", "Lesbarkeit, Struktur und Dokumentation", 25)
-            self._create_exam_criterion(exam_freestyle, "Funktionalität", "Korrekte Implementierung der Anforderungen", 25)
-            self._create_exam_criterion(exam_freestyle, "Innovation", "Kreativität und Originalität der Lösung", 25)
-            self._create_exam_criterion(exam_freestyle, "Präsentation", "Darstellung und Erklärung des Projekts", 25)
-
-            # --- Prüfungen mit Modulvoraussetzungen ---
-            self.stdout.write('\n--- Prüfungen mit Modulvoraussetzungen ---')
-            
-            # Grundlagenprüfung (erfordert Python Grundlagen Modul)
-            try:
-                module_basics = Module.objects.get(title="Python Grundlagen")
-                
-                exam_basics = self._create_exam(
-                    "Python Grundlagen Abschlussprüfung", 
-                    duration_weeks=1, 
-                    difficulty="easy", 
-                    description="Teste deine Beherrschung der Python-Grundlagen. Variablen, Kontrollstrukturen und einfache Funktionen.",
-                    modules=[module_basics]
+            # 1. Create 5 Exams without prerequisites
+            self.stdout.write('  - Erstelle 5 Prüfungen ohne Voraussetzungen...')
+            no_prereq_exam_titles = [
+                "Offenes Coding-Projekt", "Logik-Rätsel in Python", "UI/UX Design Challenge",
+                "Technisches Schreiben Aufgabe", "Datenbank-Abfrage Optimierung"
+            ]
+            for i in range(5):
+                exam_title = no_prereq_exam_titles[i]
+                exam_desc = f"Dies ist eine frei verfügbare Prüfung zum Thema {exam_title}. Keine Modulvoraussetzungen nötig."
+                reqs = random.sample(PLAUSIBLE_REQUIREMENTS, k=random.randint(4, 6))
+                exam_obj, criteria_objs = self._create_exam(
+                    title=exam_title,
+                    duration_weeks=random.randint(1, 2),
+                    difficulty=random.choice([ExamDifficulty.EASY, ExamDifficulty.MEDIUM]),
+                    description=exam_desc,
+                    modules=None,
+                    requirements=reqs
                 )
-                
-                # Bewertungskriterien 
-                self._create_exam_criterion(exam_basics, "Variablen & Datentypen", "Korrekte Verwendung von Variablen und Datentypen", 20)
-                self._create_exam_criterion(exam_basics, "Kontrollstrukturen", "Effektive Nutzung von if/else und Schleifen", 30)
-                self._create_exam_criterion(exam_basics, "Funktionen", "Funktionsdefinition und -aufruf", 30)
-                self._create_exam_criterion(exam_basics, "Code-Stil", "Einhaltung der PEP 8 Richtlinien", 20)
-                
-            except Module.DoesNotExist:
-                self.stdout.write(self.style.WARNING('Modul "Python Grundlagen" nicht gefunden, überspringe zugehörige Prüfung.'))
+                if exam_obj:
+                    all_exams[exam_obj] = criteria_objs
+                    created_exam_titles.add(exam_title)
 
-            # Mehrmodulprüfung (erfordert mehrere Module)
-            try:
-                modules_to_include = []
-                
-                for module_title in ["Python Grundlagen", "Python Datenstrukturen"]:
-                    try:
-                        module = Module.objects.get(title=module_title)
-                        modules_to_include.append(module)
-                    except Module.DoesNotExist:
-                        self.stdout.write(self.style.WARNING(f'Modul "{module_title}" nicht gefunden.'))
-                
-                if len(modules_to_include) >= 2:
-                    exam_multi = self._create_exam(
-                        "Python Programmierung Praktikum", 
-                        duration_weeks=3, 
-                        difficulty="medium", 
-                        description="Praktische Programmieraufgabe mit grundlegenden Konzepten und Datenstrukturen.",
-                        modules=modules_to_include
-                    )
-                    
-                    # Bewertungskriterien
-                    self._create_exam_criterion(exam_multi, "Problemanalyse", "Analyse und Verständnis der Aufgabenstellung", 20)
-                    self._create_exam_criterion(exam_multi, "Datenstrukturen", "Korrekte Auswahl und Implementierung der Datenstrukturen", 25)
-                    self._create_exam_criterion(exam_multi, "Algorithmus", "Effizienz und Korrektheit des Algorithmus", 30)
-                    self._create_exam_criterion(exam_multi, "Codequalität", "Lesbarkeit, Struktur und Dokumentation", 25)
-                    
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f'Fehler beim Erstellen der Mehrmodulprüfung: {e}'))
+            # 2. Create 15 Exams WITH prerequisites
+            self.stdout.write('  - Erstelle 15 Prüfungen mit Voraussetzungen...')
+            exam_titles_with_prereqs = [t for t in PLAUSIBLE_EXAM_TITLES if t not in created_exam_titles]
+            if len(exam_titles_with_prereqs) < 15:
+                 # Add generic titles if needed
+                 exam_titles_with_prereqs.extend([f"Generische Prüfung Nr. {i+1}" for i in range(15 - len(exam_titles_with_prereqs))])
 
-            # Fortgeschrittene Prüfung
-            try:
-                modules_advanced = []
-                for module_title in ["Python Fortgeschrittene", "OOP in Python"]:
-                    try:
-                        module = Module.objects.get(title=module_title)
-                        modules_advanced.append(module)
-                    except Module.DoesNotExist:
-                        self.stdout.write(self.style.WARNING(f'Modul "{module_title}" nicht gefunden.'))
-                
-                if modules_advanced:
-                    exam_advanced = self._create_exam(
-                        "Python Fortgeschrittene Konzepte", 
-                        duration_weeks=4, 
-                        difficulty="hard", 
-                        description="Vertiefte Aufgaben zu fortgeschrittenen Python-Konzepten und objektorientierter Programmierung.",
-                        modules=modules_advanced
-                    )
-                    
-                    # Bewertungskriterien
-                    self._create_exam_criterion(exam_advanced, "OOP Design", "Objektorientiertes Design und Klassenstruktur", 30)
-                    self._create_exam_criterion(exam_advanced, "Funktionale Konzepte", "Verwendung funktionaler Programmiertechniken", 25)
-                    self._create_exam_criterion(exam_advanced, "Fortgeschrittene Features", "Einsatz fortgeschrittener Python-Features", 25)
-                    self._create_exam_criterion(exam_advanced, "Tests & Dokumentation", "Testabdeckung und Dokumentationsqualität", 20)
-                    
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f'Fehler beim Erstellen der fortgeschrittenen Prüfung: {e}'))
+            for i in range(15):
+                if not module_list: # Should not happen with 40 modules, but safety check
+                     self.stdout.write(self.style.WARNING("Keine Module mehr verfügbar für Prüfungs-Voraussetzungen."))
+                     break
+                exam_title = exam_titles_with_prereqs[i]
+                exam_desc = f"Prüfung zum Thema {exam_title}. Erfordert Abschluss spezifischer Module."
+                reqs = random.sample(PLAUSIBLE_REQUIREMENTS, k=random.randint(5, 8))
+                # Select 1 to 4 random modules as prerequisites
+                num_modules = random.randint(1, min(4, len(module_list)))
+                required_modules = random.sample(module_list, k=num_modules)
+                exam_obj, criteria_objs = self._create_exam(
+                    title=exam_title,
+                    duration_weeks=random.randint(1, 4),
+                    difficulty=random.choice(ExamDifficulty.choices)[0], # Get value like 'easy'
+                    description=exam_desc,
+                    modules=required_modules,
+                    requirements=reqs
+                )
+                if exam_obj:
+                    all_exams[exam_obj] = criteria_objs
+                    created_exam_titles.add(exam_title)
 
-            # Abschließende Bestätigung
-            self.stdout.write(self.style.SUCCESS('\nPrüfungen erfolgreich erstellt!'))
+            self.stdout.write(self.style.SUCCESS(f'{len(all_exams)} Prüfungen erstellt.'))
+            exam_list = list(all_exams.keys()) # List of exam objects
+
+            # --- Set User Task Progress ---
+            self.stdout.write(f'Setze Aufgabenfortschritt für User "{test_user.username}"...')
+            exams_to_make_available = []
+            exams_with_prereqs = [e for e in exam_list if e.modules.exists()]
+
+            if len(exams_with_prereqs) >= 5:
+                # Select 5 exams that we want to make available for the user
+                exams_to_make_available = random.sample(exams_with_prereqs, k=5)
+                self.stdout.write(f'  - Ziel: Mache {len(exams_to_make_available)} Prüfungen verfügbar.')
+
+                modules_to_complete = set()
+                for exam in exams_to_make_available:
+                    modules_to_complete.update(exam.modules.all())
+
+                self.stdout.write(f'  - Dafür müssen {len(modules_to_complete)} Module abgeschlossen werden.')
+                completed_tasks_count = 0
+                for module in modules_to_complete:
+                    if module in all_modules and all_modules[module]: # Check if module and its tasks exist
+                        for task in all_modules[module]:
+                            UserTaskProgress.objects.update_or_create(
+                                user=test_user,
+                                task=task,
+                                defaults={'completed': True, 'completed_at': timezone.now()}
+                            )
+                            completed_tasks_count += 1
+                self.stdout.write(self.style.SUCCESS(f'  - {completed_tasks_count} Aufgaben in erforderlichen Modulen als abgeschlossen markiert.'))
+
+                # Ensure some other modules are NOT fully completed
+                potential_incomplete_modules = [m for m in module_list if m not in modules_to_complete and m in all_modules and all_modules[m]]
+                if potential_incomplete_modules:
+                     module_to_make_incomplete = random.choice(potential_incomplete_modules)
+                     tasks_in_incomplete_mod = all_modules[module_to_make_incomplete]
+                     if len(tasks_in_incomplete_mod) > 1:
+                         # Complete only the first task
+                         UserTaskProgress.objects.update_or_create(
+                             user=test_user,
+                             task=tasks_in_incomplete_mod[0],
+                             defaults={'completed': True, 'completed_at': timezone.now()}
+                         )
+                         # Delete progress for other tasks in this module
+                         UserTaskProgress.objects.filter(user=test_user, task__in=tasks_in_incomplete_mod[1:]).delete()
+                         self.stdout.write(f'  - Modul "{module_to_make_incomplete.title}" als teilweise abgeschlossen markiert (für Testzwecke).')
+
+            else:
+                 self.stdout.write(self.style.WARNING("Nicht genügend Prüfungen mit Voraussetzungen erstellt, um 5 verfügbar zu machen."))
+
+
+            # --- Create specific Exam Attempts for Test User ---
+            self.stdout.write('Erstelle spezifische Exam Attempts...')
+            created_attempts_exams = set() # Track exams used for attempts
+
+            # 1. Graded Attempt
+            exam_for_graded = None
+            possible_graded_exams = [e for e in exam_list if e not in exams_to_make_available]
+            if not possible_graded_exams:
+                possible_graded_exams = [e for e in exam_list if not e.modules.exists()] # Fallback to no-prereq
             
-            # Explizite Bereinigung der Exam-Module-Beziehungen für Prüfungen ohne Voraussetzungen
-            if exam_intro and exam_freestyle:
-                try:
-                    # Methode 1: Django ORM - nochmals explizit leeren
-                    self.stdout.write("Stelle sicher, dass Prüfungen ohne Voraussetzungen wirklich keine Module haben...")
-                    exam_intro.modules.clear()
-                    exam_freestyle.modules.clear()
+            if possible_graded_exams: # If Block 1
+                 exam_for_graded = random.choice(possible_graded_exams)
+                 criteria_for_graded = all_exams.get(exam_for_graded)
+
+                 if criteria_for_graded: # If Block 2
+                     try: # Try Block
+                         # Schritt 1: Attempt holen oder erstellen
+                         graded_attempt, created = ExamAttempt.objects.get_or_create(
+                             exam=exam_for_graded,
+                             user=test_user,
+                             # Hier keine Defaults für Status etc., die wir sowieso überschreiben
+                             defaults={
+                                 'started_at': timezone.now() - timedelta(days=30),
+                                 'submitted_at': timezone.now() - timedelta(days=20),
+                             }
+                         )
+
+                         # Schritt 2: Felder setzen (unabhängig von created)
+                         graded_attempt.status = ExamAttempt.Status.GRADED
+                         graded_attempt.feedback = "Sehr solide Leistung. Kleinere Verbesserungsmöglichkeiten im Bereich X."
+                         graded_attempt.graded_at = timezone.now() - timedelta(days=10)
+                         graded_attempt.graded_by = test_user
+
+                         # Schritt 3: Attempt speichern, um sicher eine ID zu haben und Status zu aktualisieren!
+                         graded_attempt.save()
+
+                         # Schritt 4: CriterionScores erstellen (nachdem Attempt gespeichert wurde)
+                         CriterionScore.objects.filter(attempt=graded_attempt).delete() # Alte Scores löschen
+                         total_score = Decimal('0.00') # Use Decimal for total score as well
+                         for criterion in criteria_for_graded:
+                             # Calculate value first as float
+                             raw_achieved = float(random.uniform(0.5, 1.0) * criterion.max_points)
+                             # Convert to Decimal and quantize to exactly 2 decimal places
+                             achieved = Decimal(str(raw_achieved)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+ 
+                             # Ensure achieved does not exceed max_points (due to rounding)
+                             achieved = min(achieved, Decimal(str(criterion.max_points)))
+                             
+                             CriterionScore.objects.create(
+                                 attempt=graded_attempt, # Jetzt hat graded_attempt sicher eine ID
+                                 criterion=criterion,
+                                 achieved_points=achieved
+                             )
+                             total_score += achieved
+
+                         # Schritt 5: Finales Speichern mit dem Score (wird auch durch Signale ausgelöst, aber explizit ist sicher)
+                         graded_attempt.score = total_score
+                         graded_attempt.save()
+
+                         log_msg = f'  - Bewerteter Versuch für "{exam_for_graded.title}" erstellt.' if created else f'  - Bewerteter Versuch für "{exam_for_graded.title}" aktualisiert.'
+                         self.stdout.write(self.style.SUCCESS(log_msg))
+                         created_attempts_exams.add(exam_for_graded)
                     
-                    # Methode 2: Direktes SQL für Sicherheit
-                    from django.db import connection
-                    with connection.cursor() as cursor:
-                        # Finde den Tabellennamen der Many-to-Many-Beziehung
-                        table_name = Exam.modules.through._meta.db_table
-                        # Lösche alle Einträge für die beiden Prüfungen ohne Voraussetzungen
-                        cursor.execute(f"""
-                            DELETE FROM {table_name} 
-                            WHERE exam_id IN (%s, %s)
-                        """, [exam_intro.id, exam_freestyle.id])
-                        affected_rows = cursor.rowcount
-                        self.stdout.write(self.style.SUCCESS(f"SQL-Bereinigung: {affected_rows} Modulzuweisungen entfernt."))
-                    
-                    # Methode 3: Nachprüfung
-                    intro_modules = exam_intro.modules.all()
-                    freestyle_modules = exam_freestyle.modules.all()
-                    if intro_modules.exists():
-                        self.stdout.write(self.style.WARNING(f'WARNUNG: Exam "{exam_intro.title}" hat immer noch Module: {", ".join([m.title for m in intro_modules])}'))
-                    if freestyle_modules.exists():
-                        self.stdout.write(self.style.WARNING(f'WARNUNG: Exam "{exam_freestyle.title}" hat immer noch Module: {", ".join([m.title for m in freestyle_modules])}'))
-                    else:
-                        self.stdout.write(self.style.SUCCESS("Erfolgreich überprüft: Die Prüfungen ohne Voraussetzungen haben jetzt wirklich keine Module."))
-                
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f'Fehler bei der expliziten Bereinigung der Modulzuweisungen: {e}'))
+                     except Exception as e: # Aligned with Try Block
+                         self.stdout.write(self.style.ERROR(f'  - Fehler beim Erstellen/Aktualisieren des bewerteten Versuchs für {exam_for_graded.title}: {e}'))
+                 else: # Aligned with If Block 2
+                     self.stdout.write(self.style.WARNING(f'  - Keine Kriterien für Prüfung "{exam_for_graded.title}" gefunden, überspringe bewerteten Versuch.'))
+            else: # Aligned with If Block 1
+                 self.stdout.write(self.style.WARNING("Keine passende Prüfung für bewerteten Versuch gefunden."))
+
+
+            # 2. Submitted Attempt 
+            exam_for_submitted = None
+            possible_submitted_exams = [e for e in exam_list if e not in created_attempts_exams]
+            if not possible_submitted_exams:
+                 possible_submitted_exams = [e for e in exam_list if not e.modules.exists() and e not in created_attempts_exams]
+            
+            if possible_submitted_exams: # If Block 3
+                 exam_for_submitted = random.choice(possible_submitted_exams)
+                 try: # Try Block 2
+                     # Holen oder erstellen
+                     submitted_attempt, created = ExamAttempt.objects.get_or_create(
+                         exam=exam_for_submitted,
+                         user=test_user,
+                         defaults={
+                             'started_at': timezone.now() - timedelta(days=15),
+                             'submitted_at': timezone.now() - timedelta(days=2),
+                         }
+                     )
+                     # Status setzen und speichern
+                     submitted_attempt.status = ExamAttempt.Status.SUBMITTED
+                     submitted_attempt.submitted_at = timezone.now() - timedelta(days=2) # Sicherstellen
+                     submitted_attempt.save()
+
+                     log_msg = f'  - Abgegebener Versuch für "{exam_for_submitted.title}" erstellt.' if created else f'  - Abgegebener Versuch für "{exam_for_submitted.title}" aktualisiert.'
+                     self.stdout.write(self.style.SUCCESS(log_msg))
+                     created_attempts_exams.add(exam_for_submitted)
+                 except Exception as e: # Aligned with Try Block 2
+                     self.stdout.write(self.style.ERROR(f'  - Fehler beim Erstellen/Aktualisieren des abgegebenen Versuchs für {exam_for_submitted.title}: {e}'))
+            else: # Aligned with If Block 3
+                 self.stdout.write(self.style.WARNING("Keine passende Prüfung für abgegebenen Versuch gefunden."))
+
+            # 3. Started Attempt 
+            exam_for_started = None
+            possible_started_exams = [e for e in exam_list if e not in created_attempts_exams]
+            if not possible_started_exams:
+                 possible_started_exams = [e for e in exam_list if e.modules.exists() and e not in created_attempts_exams]
+            if not possible_started_exams: # This if might be redundant, check logic if needed
+                 possible_started_exams = [e for e in exam_list if e not in created_attempts_exams]
+
+            if possible_started_exams: # If Block 4
+                 exam_for_started = random.choice(possible_started_exams)
+                 try: # Try Block 3
+                     # Holen oder erstellen
+                     started_attempt, created = ExamAttempt.objects.get_or_create(
+                         exam=exam_for_started,
+                         user=test_user,
+                         defaults={
+                             'started_at': timezone.now() - timedelta(days=5),
+                         }
+                     )
+                     # Status setzen und speichern
+                     started_attempt.status = ExamAttempt.Status.STARTED
+                     started_attempt.started_at = timezone.now() - timedelta(days=5) # Sicherstellen
+                     started_attempt.save()
+
+                     log_msg = f'  - Gestarteter Versuch für "{exam_for_started.title}" erstellt.' if created else f'  - Gestarteter Versuch für "{exam_for_started.title}" aktualisiert.'
+                     self.stdout.write(self.style.SUCCESS(log_msg))
+                     created_attempts_exams.add(exam_for_started)
+                 except Exception as e: # Aligned with Try Block 3
+                     self.stdout.write(self.style.ERROR(f'  - Fehler beim Erstellen/Aktualisieren des gestarteten Versuchs für {exam_for_started.title}: {e}'))
+            else: # Aligned with If Block 4
+                self.stdout.write(self.style.WARNING("Keine passende Prüfung für gestarteten Versuch gefunden."))
+            
+            # Verify available exams count implicitly via view logic later
             
         else:
-            self.stdout.write(self.style.WARNING('\nÜberspringe Prüfungserstellung, da App nicht verfügbar.'))
+            self.stdout.write(self.style.WARNING('Überspringe Prüfungserstellung und Attempt-Generierung, da App nicht verfügbar.'))
 
         # Abschließende Erfolgsmeldung
-        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully for all Python modules and exams.')) 
+        self.stdout.write(self.style.SUCCESS('Database seeding completed successfully.')) 

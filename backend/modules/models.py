@@ -7,10 +7,25 @@ from django.db.models import Exists, OuterRef # Import needed for efficient chec
 
 class Module(models.Model):
     """Represents a learning module."""
+    # NEU: Kategorien für Module
+    class ModuleCategory(models.TextChoices):
+        PYTHON = 'Python', _('Python')
+        WEB_DEV = 'Web Development', _('Web Development')
+        DATA_SCIENCE = 'Data Science', _('Data Science')
+        DEVOPS = 'DevOps & Tools', _('DevOps & Tools')
+        SONSTIGES = 'Sonstiges', _('Sonstiges')
+
     title = models.CharField(
         max_length=200,
         unique=True,
         help_text=_("The unique title of the module.")
+    )
+    # NEU: Kategorie-Feld
+    category = models.CharField(
+        max_length=50,
+        choices=ModuleCategory.choices,
+        default=ModuleCategory.SONSTIGES,
+        help_text=_("The category this module belongs to.")
     )
     is_public = models.BooleanField(
         default=True,
@@ -27,6 +42,7 @@ class Module(models.Model):
         verbose_name = _("Module")
         verbose_name_plural = _("Modules")
         ordering = ['title']
+        # ordering = ['category', 'title'] # Optional: Standard-Sortierung anpassen
 
     def check_user_accessibility(self, user):
         """Checks if a given user can access this module."""

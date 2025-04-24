@@ -11,11 +11,23 @@ import {
   IoCheckmarkDoneOutline,
   IoCloseOutline,
   IoInformationCircleOutline,
+  IoLockClosedOutline,
+  IoPlayOutline,
+  IoHourglassOutline,
+  IoCheckmarkCircleOutline,
 } from "react-icons/io5";
 import { useExams, Exam, ExamAttempt } from "../context/ExamContext";
 import PopupExamOverview from "../components/pop_ups/popup_exam_overview";
+import clsx from "clsx";
+import ButtonFilterSimple from "../components/ui_elements/buttons/button_filter_simple";
 
-type TabState = "verfügbar" | "inBearbeitung" | "abgeschlossen";
+type TabState = "übersicht" | "verfügbar" | "inBearbeitung" | "abgeschlossen";
+type UserExamStatus =
+  | "locked"
+  | "available"
+  | "started"
+  | "submitted"
+  | "graded";
 
 // Hilfsfunktion zur Berechnung der verbleibenden Tage
 const getRemainingTimeText = (remainingDays: number | null): string => {
@@ -56,8 +68,26 @@ const truncateText = (
   return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 };
 
+// NEU: Definiert die Reihenfolge für die Sortierung nach Status
+const getStatusOrder = (status: UserExamStatus): number => {
+  switch (status) {
+    case "started":
+      return 1;
+    case "available":
+      return 2;
+    case "submitted":
+      return 3;
+    case "graded":
+      return 4;
+    case "locked":
+      return 5;
+    default:
+      return 6; // Fallback
+  }
+};
+
 function FinalExam() {
-  const [activeTab, setActiveTab] = useState<TabState>("verfügbar");
+  const [activeTab, setActiveTab] = useState<TabState>("übersicht");
   const [sliderStyle, setSliderStyle] = useState({});
   const tabsRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +102,8 @@ function FinalExam() {
   );
   const [selectedAttemptForPopup, setSelectedAttemptForPopup] =
     useState<ExamAttempt | null>(null);
+  // NEU: State für den Schwierigkeitsgrad-Filter
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
 
   // ExamContext-Daten und Funktionen abrufen
   const {
@@ -83,6 +115,9 @@ function FinalExam() {
     startExam,
     submitExam,
     refreshUserExams,
+    allExams,
+    loadingAllExams,
+    errorAllExams,
   } = useExams();
 
   // DEBUG: Log des ExamContext beim Mount und wenn sich availableExams ändert
@@ -148,27 +183,29 @@ function FinalExam() {
         className="absolute inset-y-0 bg-dsp-orange rounded-md shadow-sm transition-all duration-300 ease-out pointer-events-none"
         style={sliderStyle}
       />
-      {(["verfügbar", "inBearbeitung", "abgeschlossen"] as TabState[]).map(
-        (tab) => (
-          <button
-            key={tab}
-            data-tab={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`relative z-10 px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer 
+      {(
+        [
+          "übersicht",
+          "verfügbar",
+          "inBearbeitung",
+          "abgeschlossen",
+        ] as TabState[]
+      ).map((tab) => (
+        <button
+          key={tab}
+          data-tab={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`relative z-10 px-4 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer 
             ${
               activeTab === tab
                 ? "text-white"
                 : "text-gray-600 hover:text-gray-800"
             }`}
-          >
-            {tab === "verfügbar"
-              ? "Verfügbar"
-              : tab === "inBearbeitung"
-              ? "In Bearbeitung"
-              : "Abgeschlossen"}
-          </button>
-        )
-      )}
+        >
+          {tab.charAt(0).toUpperCase() +
+            tab.slice(1).replace("inBearbeitung", "In Bearbeitung")}
+        </button>
+      ))}
     </div>
   );
 
@@ -228,6 +265,273 @@ function FinalExam() {
     setSelectedAttemptForPopup(null);
   };
 
+  // ================================
+  // NEU: Rendering für Übersichtstab
+  // ================================
+  const renderOverviewTab = () => {
+    console.log("RENDER OVERVIEW TAB:", {
+      loadingAllExams,
+      errorAllExams,
+      allExamsCount: allExams.length,
+      availableExamsCount: availableExams.length,
+      activeExamsCount: activeExams.length,
+      completedExamsCount: completedExams.length,
+    });
+
+    if (loadingAllExams || loadingUserExams) {
+      return <div className="text-center py-8">Lädt Prüfungsübersicht...</div>;
+    }
+
+    if (errorAllExams || errorUserExams) {
+      return (
+        <div className="text-center py-8 text-red-600">
+          Fehler beim Laden der Prüfungsübersicht:{" "}
+          {errorAllExams || errorUserExams}
+        </div>
+      );
+    }
+
+    if (allExams.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          Keine Prüfungen im System gefunden.
+        </div>
+      );
+    }
+
+    // Erstelle Lookups für schnellen Status-Check
+    const availableExamIds = new Set(availableExams.map((exam) => exam.id));
+    const activeAttemptsMap = new Map(
+      activeExams.map((attempt) => [attempt.exam.id, attempt])
+    );
+    const completedAttemptsMap = new Map(
+      completedExams.map((attempt) => [attempt.exam.id, attempt])
+    );
+
+    // 1. Prüfungen mit Status und Attempt anreichern
+    const examsWithStatus = allExams.map((exam) => {
+      let userExamStatus: UserExamStatus = "locked";
+      let attempt: ExamAttempt | undefined = undefined;
+
+      if (availableExamIds.has(exam.id)) {
+        userExamStatus = "available";
+      } else if (activeAttemptsMap.has(exam.id)) {
+        userExamStatus = "started";
+        attempt = activeAttemptsMap.get(exam.id);
+      } else if (completedAttemptsMap.has(exam.id)) {
+        attempt = completedAttemptsMap.get(exam.id);
+        userExamStatus = attempt?.status === "graded" ? "graded" : "submitted";
+      }
+      return { exam, status: userExamStatus, attempt };
+    });
+
+    // 2. Filtern nach Schwierigkeit
+    const filteredExams = examsWithStatus.filter(
+      (item) =>
+        selectedDifficulty === "all" ||
+        item.exam.exam_difficulty === selectedDifficulty
+    );
+
+    // 3. Sortieren nach Status, dann Titel
+    const sortedAndFilteredExams = filteredExams.sort((a, b) => {
+      const orderA = getStatusOrder(a.status);
+      const orderB = getStatusOrder(b.status);
+
+      if (orderA !== orderB) {
+        return orderA - orderB; // Nach Status sortieren
+      }
+      // Bei gleichem Status nach Titel sortieren
+      return a.exam.exam_title.localeCompare(b.exam.exam_title);
+    });
+
+    // 4. Rendern der gefilterten und sortierten Liste
+    if (sortedAndFilteredExams.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          Keine Prüfungen entsprechen den aktuellen Filterkriterien.
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sortedAndFilteredExams.map(({ exam, status, attempt }) => {
+          // userExamStatus und isLocked direkt aus dem item verwenden
+          const userExamStatus = status;
+          const isLocked = userExamStatus === "locked";
+
+          return (
+            <div
+              key={exam.id}
+              className={clsx(
+                "bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 flex flex-col transition-all duration-200",
+                {
+                  "hover:shadow-lg": !isLocked,
+                  "border-l-4 border-dsp-green": userExamStatus === "started",
+                  "border-l-4 border-dsp-blue":
+                    userExamStatus === "submitted" ||
+                    userExamStatus === "graded",
+                }
+              )}
+            >
+              <div
+                className={clsx("p-5 flex-grow", {
+                  "opacity-40 grayscale": isLocked,
+                })}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3
+                    className={clsx(
+                      "text-base font-semibold text-gray-800 leading-tight mr-2",
+                      { "text-gray-500": isLocked }
+                    )}
+                  >
+                    {exam.exam_title || "Titel nicht verfügbar"}
+                  </h3>
+                  <div className="flex-shrink-0 mt-px">
+                    {userExamStatus === "locked" && (
+                      <IoLockClosedOutline
+                        className="text-gray-400"
+                        title="Gesperrt"
+                      />
+                    )}
+                    {userExamStatus === "available" && (
+                      <IoPlayOutline
+                        className="text-lime-500"
+                        title="Verfügbar"
+                      />
+                    )}
+                    {userExamStatus === "started" && attempt && (
+                      <IoHourglassOutline
+                        className="text-yellow-500 animate-pulse"
+                        title="In Bearbeitung"
+                      />
+                    )}
+                    {(userExamStatus === "submitted" ||
+                      userExamStatus === "graded") &&
+                      attempt && (
+                        <IoCheckmarkCircleOutline
+                          className={clsx({
+                            "text-blue-500": userExamStatus === "submitted",
+                            "text-indigo-600": userExamStatus === "graded",
+                          })}
+                          title={
+                            userExamStatus === "graded"
+                              ? "Bewertet"
+                              : "Abgegeben"
+                          }
+                        />
+                      )}
+                  </div>
+                </div>
+
+                <p
+                  className={clsx(
+                    "text-xs text-gray-500 mb-3 h-10 overflow-hidden",
+                    { italic: isLocked }
+                  )}
+                >
+                  {isLocked
+                    ? "Voraussetzungen noch nicht erfüllt oder bereits anderer Versuch gestartet/beendet."
+                    : truncateText(exam.exam_description, 80)}
+                </p>
+
+                <div className="flex items-center text-xs text-gray-500 mb-1">
+                  <IoTimeOutline className="mr-1.5" /> {exam.exam_duration_week}{" "}
+                  {exam.exam_duration_week === 1 ? "Woche" : "Wochen"}
+                  <IoStarOutline className="ml-3 mr-1.5" />
+                  {exam.criteria?.reduce((sum, c) => sum + c.max_points, 0) ??
+                    "?"}{" "}
+                  Pkt.
+                </div>
+
+                {attempt && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-xs space-y-1">
+                    {userExamStatus === "started" && attempt.due_date && (
+                      <div className="flex items-center text-red-600 font-medium">
+                        <IoFlagOutline className="mr-1.5" /> Fällig:{" "}
+                        {formatDate(attempt.due_date)}
+                      </div>
+                    )}
+                    {(userExamStatus === "submitted" ||
+                      userExamStatus === "graded") &&
+                      attempt.submitted_at && (
+                        <div className="flex items-center text-gray-600">
+                          <IoCheckmarkDoneOutline className="mr-1.5 text-green-600" />{" "}
+                          Abgegeben: {formatDate(attempt.submitted_at)}
+                        </div>
+                      )}
+                    {userExamStatus === "graded" && attempt.score !== null && (
+                      <div className="flex items-center text-dsp-blue font-semibold">
+                        <IoStarOutline className="mr-1.5" /> Ergebnis:{" "}
+                        {attempt.score} /{" "}
+                        {exam.criteria?.reduce(
+                          (sum, c) => sum + c.max_points,
+                          0
+                        ) ?? "?"}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-3 border-t border-gray-200">
+                {userExamStatus === "locked" && (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs text-gray-500 italic mr-2">
+                      Zum Freischalten Module absolvieren
+                    </span>
+                    <ButtonSecondary
+                      title="Details anzeigen"
+                      classNameButton="sm:w-auto text-sm"
+                      onClick={() => handleOpenPopup(exam)}
+                    />
+                  </div>
+                )}
+                {userExamStatus === "available" && (
+                  <div className="flex justify-end w-full">
+                    <ButtonPrimary
+                      title="Details anzeigen"
+                      classNameButton="w-full sm:w-auto text-sm"
+                      onClick={() => handleOpenPopup(exam)}
+                    />
+                  </div>
+                )}
+                {userExamStatus === "started" && attempt && (
+                  <div className="flex justify-end w-full">
+                    <ButtonPrimary
+                      title="Details anzeigen"
+                      classNameButton="w-full sm:w-auto text-sm"
+                      onClick={() => handleOpenPopup(exam, attempt)}
+                    />
+                  </div>
+                )}
+                {userExamStatus === "submitted" && attempt && (
+                  <div className="flex justify-end w-full">
+                    <ButtonPrimary
+                      title="Details anzeigen"
+                      classNameButton="w-full sm:w-auto text-sm"
+                      onClick={() => handleOpenPopup(exam, attempt)}
+                    />
+                  </div>
+                )}
+                {userExamStatus === "graded" && attempt && (
+                  <div className="flex justify-end w-full">
+                    <ButtonPrimary
+                      title="Details anzeigen"
+                      classNameButton="w-full sm:w-auto text-sm"
+                      onClick={() => handleOpenPopup(exam, attempt)}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Verfügbare Prüfungen rendern
   const renderAvailableExams = () => {
     console.log("RENDER AVAILABLE EXAMS:", {
@@ -257,6 +561,21 @@ function FinalExam() {
       );
     }
 
+    // NEU: Filtern nach Schwierigkeit
+    const filteredAvailableExams = availableExams.filter(
+      (exam) =>
+        selectedDifficulty === "all" ||
+        exam.exam_difficulty === selectedDifficulty
+    );
+
+    if (filteredAvailableExams.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          Keine verfügbaren Prüfungen entsprechen den aktuellen Filterkriterien.
+        </div>
+      );
+    }
+
     // Debug: Überprüfen der Datenstruktur der ersten Prüfung
     if (availableExams.length > 0) {
       console.log(
@@ -268,7 +587,7 @@ function FinalExam() {
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {availableExams.map((exam) => {
+        {filteredAvailableExams.map((exam) => {
           console.log("Rendering exam item:", exam.id, {
             title: exam.exam_title,
             description: exam.exam_description,
@@ -325,9 +644,9 @@ function FinalExam() {
               </div>
               <div className="bg-gray-50 p-4 border-t border-gray-200">
                 <ButtonPrimary
-                  title="Prüfung starten"
+                  title="Details anzeigen"
+                  onClick={() => handleOpenPopup(exam)}
                   classNameButton="w-full text-sm"
-                  onClick={() => handleStartExam(exam.id)}
                 />
               </div>
             </div>
@@ -551,12 +870,50 @@ function FinalExam() {
           Prüfungsunterlagen hochladen.
         </p>
 
+        {/* NEU: Filter UI - Ersetzt das alte Select-Dropdown */}
+        {/* <div className=\"mb-6 flex items-center\"> */}
+        {/*   <label */}
+        {/*     htmlFor=\"difficultyFilter\" */}
+        {/*     className=\"text-sm font-medium text-gray-700 mr-2\" */}
+        {/*   > */}
+        {/*     Filtern nach Schwierigkeit: */}
+        {/*   </label> */}
+        {/*   <select */}
+        {/*     id=\"difficultyFilter\" */}
+        {/*     value={selectedDifficulty} */}
+        {/*     onChange={(e) => setSelectedDifficulty(e.target.value)} */}
+        {/*     className=\"block pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-dsp-orange focus:border-dsp-orange sm:text-sm rounded-md shadow-sm bg-white\" */}
+        {/*   > */}
+        {/*     <option value=\"all\">Alle</option> */}
+        {/*     <option value=\"easy\">Einfach</option> */}
+        {/*     <option value=\"medium\">Mittel</option> */}
+        {/*     <option value=\"hard\">Schwer</option> */}
+        {/*   </select> */}
+        {/* </div> */}
+        <div className="mb-6">
+          <ButtonFilterSimple
+            label="Filtern nach Schwierigkeit:"
+            options={["Einfach", "Mittel", "Schwer"]}
+            // Wandelt den einzelnen String-State in ein Array um, wie von der Komponente erwartet
+            activeOptions={
+              selectedDifficulty === "all" ? [] : [selectedDifficulty]
+            }
+            // Passt den Klick-Handler an, um den State direkt zu setzen
+            onOptionClick={(difficulty) => setSelectedDifficulty(difficulty)}
+            // Setzt den State zurück, wenn "Löschen" geklickt wird
+            onClearClick={() => setSelectedDifficulty("all")}
+            // Optional: Spezifische Klasse für aktive Buttons (z.B. orange)
+            activeClassName="bg-dsp-orange text-white border-dsp-orange"
+          />
+        </div>
+
         {renderTabs()}
 
         <div className="mt-6">
           {activeTab === "verfügbar" && renderAvailableExams()}
           {activeTab === "inBearbeitung" && renderInProgressExams()}
           {activeTab === "abgeschlossen" && renderCompletedExams()}
+          {activeTab === "übersicht" && renderOverviewTab()}
         </div>
 
         {isSubmitting && (

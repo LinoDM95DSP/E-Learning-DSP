@@ -259,6 +259,27 @@ class ExamAttempt(models.Model):
         return f"{self.user} – {self.exam} ({self.get_status_display()})"
 
 
+# Neue Model für Prüfungsanforderungen
+class ExamRequirement(models.Model):
+    """
+    Eine spezifische Anforderung für eine Prüfung.
+    """
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="requirements")
+    description = models.TextField(help_text=_("Beschreibung der Anforderung."))
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=_("Reihenfolge der Anzeige der Anforderung.")
+    )
+
+    class Meta:
+        verbose_name = _("Exam Requirement")
+        verbose_name_plural = _("Exam Requirements")
+        ordering = ["exam", "order"] # Standard-Sortierung
+
+    def __str__(self):
+        return f"{self.exam.title} - Requirement {self.order}: {self.description[:50]}..."
+
+
 # Optional: separates Modell für Datei-Uploads (z. B. PDF-Lösungen)
 class ExamAttachment(models.Model):
     attempt = models.ForeignKey(

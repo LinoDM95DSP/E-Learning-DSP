@@ -11,6 +11,9 @@ urlpatterns = [
     path('my-exams/active/', views.ActiveExamsView.as_view(), name='user-active-exams'),       # GET /api/exams/my-exams/active/: Zeigt dem eingeloggten Benutzer alle Prüfungen an, die er gerade bearbeitet (Status 'started').
     path('my-exams/completed/', views.CompletedExamsView.as_view(), name='user-completed-exams'), # GET /api/exams/my-exams/completed/: Zeigt dem eingeloggten Benutzer alle Prüfungen an, die er abgegeben oder die bewertet wurden.
     
+    # NEU: URL für die Liste aller Prüfungen
+    path("all/", views.AllExamsListView.as_view(), name="all-exams"),
+    
     # --- Prüfungsaktionen ---
     path('<int:exam_id>/start/', views.StartExamView.as_view(), name='start-exam'), # POST /api/exams/<exam_id>/start/: Startet eine neue Prüfung für den eingeloggten Benutzer.
     path('attempts/<int:attempt_id>/submit/', views.SubmitExamView.as_view(), name='submit-exam'), # POST /api/exams/attempts/<attempt_id>/submit/: Sendet eine Prüfung zur Bewertung ein.

@@ -1,11 +1,29 @@
 from rest_framework import serializers
-from .models import Exam, ExamAttempt, ExamCriterion, CriterionScore, ExamAttachment
+from .models import Exam, ExamAttempt, ExamCriterion, CriterionScore, ExamAttachment, ExamRequirement
 from django.db.models import Q, Sum
 from django.contrib.auth import get_user_model # User importieren
 
 User = get_user_model()
 
+# Import Module model from the other app
+try:
+    from modules.models import Module
+except ImportError:
+    Module = None # Fallback if module app is not available
+
 # --- Base Serializers --- 
+
+class ModuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        # Verwende das importierte Modul-Modell
+        model = Module 
+        fields = ["id", "title"] # Nur ID und Titel benötigt
+        read_only_fields = fields # Machen wir es read-only
+
+class ExamRequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExamRequirement
+        fields = ["id", "description", "order"]
 
 class ExamCriterionSerializer(serializers.ModelSerializer):
     """Serializer für Bewertungskriterien mit Maximalpunktzahl."""
@@ -46,6 +64,10 @@ class ExamSerializer(serializers.ModelSerializer):
     exam_description = serializers.CharField(source="description")
     # Verwendet den aktualisierten ExamCriterionSerializer
     criteria = ExamCriterionSerializer(many=True, read_only=True)
+    # NEU: Module hinzufügen (Voraussetzungen)
+    modules = ModuleSerializer(many=True, read_only=True)
+    # NEU: Anforderungen hinzufügen
+    requirements = ExamRequirementSerializer(many=True, read_only=True)
     # Berechnete Gesamtpunktzahl der Prüfung hinzufügen
     total_max_points = serializers.SerializerMethodField()
 
@@ -58,7 +80,9 @@ class ExamSerializer(serializers.ModelSerializer):
             "exam_difficulty",
             "exam_description",
             "criteria",
-            "total_max_points", # Hinzugefügt
+            "requirements",
+            "modules",
+            "total_max_points",
         ]
         
     def get_total_max_points(self, obj):

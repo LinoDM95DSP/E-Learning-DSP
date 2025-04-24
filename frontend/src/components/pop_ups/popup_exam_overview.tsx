@@ -1,17 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  IoCloseOutline,
-  IoCalendarOutline,
-  IoTimeOutline,
-  IoFlagOutline,
-  IoCheckmarkCircleOutline,
   IoChatbubbleEllipsesOutline,
-  IoStatsChartOutline,
-  IoDocumentTextOutline,
-  IoListOutline,
   IoCheckmarkDoneOutline,
-  IoTimerOutline,
   IoRocketOutline,
 } from "react-icons/io5";
 import {
@@ -26,8 +17,14 @@ import {
   ChevronRight,
   X,
   Info,
+  BookOpen,
 } from "lucide-react";
-import { Exam, ExamAttempt, Criterion } from "../../context/ExamContext"; // Pfad anpassen, falls nötig
+import {
+  Exam,
+  ExamAttempt,
+  Criterion,
+  ExamRequirement,
+} from "../../context/ExamContext"; // Pfad anpassen, falls nötig, ExamRequirement importieren
 import ButtonPrimary from "../ui_elements/buttons/button_primary";
 import ButtonSecondary from "../ui_elements/buttons/button_secondary";
 
@@ -95,16 +92,6 @@ const getTotalMaxPoints = (criteria: Criterion[] | undefined): number => {
     0
   );
 };
-
-// Platzhalter-Anforderungen
-const placeholderRequirements = [
-  "Entwickle ein eigenständiges Python-Programm zu einem selbstgewählten Thema",
-  "Implementiere mindestens drei verschiedene Funktionen",
-  "Verwende objektorientierte Programmierung mit mindestens einer Klasse",
-  "Dokumentiere deinen Code mit Kommentaren",
-  "Füge eine README-Datei mit Anweisungen zur Ausführung hinzu",
-  "Stelle sicher, dass dein Programm fehlerfrei läuft",
-];
 
 interface PopupExamOverviewProps {
   exam: Exam;
@@ -224,7 +211,7 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
               </div>
             </section>
 
-            {/* Anforderungen (Platzhalter) */}
+            {/* Anforderungen */}
             <section>
               <div className="flex items-center gap-2 mb-3">
                 <ListChecks className="h-5 w-5 text-dsp-orange" />
@@ -233,21 +220,56 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
                 </h3>
               </div>
               <ul className="bg-gray-50 p-4 rounded-md space-y-2 border border-gray-200">
-                {placeholderRequirements.map((req, index) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-2 text-sm text-gray-700"
-                  >
-                    <ChevronRight className="h-4 w-4 text-dsp-orange mt-0.5 flex-shrink-0" />
-                    <span>{req}</span>
+                {exam.requirements && exam.requirements.length > 0 ? (
+                  exam.requirements
+                    .sort(
+                      (a: ExamRequirement, b: ExamRequirement) =>
+                        a.order - b.order
+                    )
+                    .map((req: ExamRequirement) => (
+                      <li
+                        key={req.id}
+                        className="flex items-start gap-2 text-sm text-gray-700"
+                      >
+                        <ChevronRight className="h-4 w-4 text-dsp-orange mt-0.5 flex-shrink-0" />
+                        <span>{req.description}</span>
+                      </li>
+                    ))
+                ) : (
+                  <li className="text-sm text-gray-500 italic">
+                    Keine spezifischen Anforderungen definiert.
                   </li>
-                ))}
+                )}
               </ul>
             </section>
           </div>
 
           {/* Rechte Spalte */}
           <div className="md:col-span-2 space-y-6">
+            {/* NEU: Voraussetzungen (an die richtige Stelle verschoben) */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="h-5 w-5 text-dsp-orange" />
+                <h3 className="font-semibold text-lg text-gray-800">
+                  Voraussetzungen
+                </h3>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-700 space-y-2 border border-gray-200">
+                {exam.modules && exam.modules.length > 0 ? (
+                  <ul className="list-disc list-inside space-y-1">
+                    {exam.modules.map((module) => (
+                      <li key={module.id}>{module.title}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="italic text-gray-500">
+                    Für diese Prüfung sind keine spezifischen Module
+                    vorausgesetzt.
+                  </p>
+                )}
+              </div>
+            </section>
+
             {/* Fristen & Zeitplan */}
             <section>
               <div className="flex items-center gap-2 mb-3">

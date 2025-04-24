@@ -26,38 +26,46 @@ class AvailableExamsView(generics.ListAPIView):
         user = self.request.user
         print(f"[DEBUG] AvailableExamsView: Lade verfügbare Prüfungen für Benutzer {user.username} (ID: {user.id})")
         
-        # 1. Finde alle Prüfungen, für die der User *keinen* Versuch gestartet hat.
-        #    Wir brauchen nur die IDs.
-        exams_without_started_attempt_ids = Exam.objects.exclude(
-            attempts__user=user,
-            attempts__status=ExamAttempt.Status.STARTED
-        ).values_list('id', flat=True)
-        
-        print(f"[DEBUG] AvailableExamsView: Gefundene Prüfungen ohne aktive Versuche: {list(exams_without_started_attempt_ids)}")
+        # 1. Finde alle Prüfungs-IDs, für die der User *bereits einen Versuch* hat (egal welcher Status).
+        attempted_exam_ids = ExamAttempt.objects.filter(
+            user=user
+        ).values_list('exam_id', flat=True).distinct() # distinct ist wichtig
 
-        # 2. Filtere diese IDs weiter: Nur die, bei denen is_available_for True zurückgibt.
+        print(f"[DEBUG] AvailableExamsView: Prüfungen mit existierenden Versuchen (IDs): {list(attempted_exam_ids)}")
+
+        # 2. Finde alle Prüfungen, die KEINEN Versuch vom User haben.
+        exams_never_attempted = Exam.objects.exclude(
+            id__in=attempted_exam_ids
+        )
+        print(f"[DEBUG] AvailableExamsView: Prüfungen ohne jeglichen Versuch vom User: {exams_never_attempted.count()}")
+
+
+        # 3. Filtere diese weiter: Nur die, bei denen is_available_for True zurückgibt (Modul-Check).
+        #    is_available_for prüft aktuell intern auch, ob ein 'started' Versuch existiert,
+        #    aber da wir hier nur 'never_attempted' prüfen, ist dieser Teil der Prüfung
+        #    redundant, aber schadet nicht. Der wichtige Teil ist der Modul-Check.
         available_exam_ids = []
-        # Iteriere über die potenziell verfügbaren Prüfungen (effizienter als alle zu laden)
-        potential_exams = Exam.objects.filter(id__in=exams_without_started_attempt_ids)
-        print(f"[DEBUG] AvailableExamsView: Prüfe {potential_exams.count()} potenzielle Prüfungen")
+        # Module vorladen für effiziente Prüfung in is_available_for
+        potential_exams = exams_never_attempted.prefetch_related('modules__tasks') 
+        print(f"[DEBUG] AvailableExamsView: Prüfe {potential_exams.count()} potenzielle (nie gestartete) Prüfungen auf Modulvoraussetzungen")
         
         for exam in potential_exams:
              print(f"[DEBUG] AvailableExamsView: Prüfe Prüfung {exam.id}: {exam.title}")
-             # Stelle sicher, dass die Module-Relation vorgeladen ist, falls benötigt
-             # exam = Exam.objects.prefetch_related('modules').get(pk=exam.id)
+             # is_available_for prüft die Modulvoraussetzungen
              if exam.is_available_for(user):
-                 print(f"[DEBUG] AvailableExamsView: Prüfung {exam.id} ist verfügbar")
+                 print(f"[DEBUG] AvailableExamsView: Prüfung {exam.id} ist verfügbar (kein Versuch + Module OK)")
                  available_exam_ids.append(exam.id)
              else:
-                 print(f"[DEBUG] AvailableExamsView: Prüfung {exam.id} ist NICHT verfügbar")
+                 print(f"[DEBUG] AvailableExamsView: Prüfung {exam.id} ist NICHT verfügbar (wahrscheinlich Modul-Voraussetzungen nicht erfüllt)")
         
-        # Gib das finale Queryset zurück
-        final_queryset = Exam.objects.filter(id__in=available_exam_ids)
+        # Gib das finale Queryset zurück (nur die, die nie versucht wurden UND verfügbar sind)
+        # Lade auch die Relationen, die der Serializer benötigt
+        final_queryset = Exam.objects.filter(id__in=available_exam_ids).prefetch_related('criteria', 'requirements', 'modules')
         
         # Debug-Info über das finale Ergebnis
-        print(f"[DEBUG] AvailableExamsView: Anzahl verfügbarer Prüfungen: {final_queryset.count()}")
+        print(f"[DEBUG] AvailableExamsView: Anzahl final verfügbarer Prüfungen: {final_queryset.count()}")
         for exam in final_queryset:
-            print(f"[DEBUG] AvailableExamsView: Verfügbare Prüfung - ID: {exam.id}, Titel: '{exam.title}', Beschreibung: '{exam.description}'")
+            print(f"[DEBUG] AvailableExamsView: Verfügbare Prüfung - ID: {exam.id}, Titel: '{exam.title}'")
             
         return final_queryset
 
@@ -75,7 +83,7 @@ class ActiveExamsView(generics.ListAPIView):
         active_attempts = ExamAttempt.objects.filter(
             user=user, 
             status=ExamAttempt.Status.STARTED
-        ).select_related('exam')
+        ).select_related('exam').prefetch_related('exam__modules')
         
         print(f"[DEBUG] ActiveExamsView: Anzahl aktiver Prüfungen: {active_attempts.count()}")
         for attempt in active_attempts:
@@ -98,11 +106,28 @@ class CompletedExamsView(generics.ListAPIView):
         completed_attempts = ExamAttempt.objects.filter(
             user=user, 
             status__in=[ExamAttempt.Status.SUBMITTED, ExamAttempt.Status.GRADED]
-        ).select_related('exam').prefetch_related('criterion_scores__criterion', 'attachments')
+        ).select_related('exam').prefetch_related('exam__modules', 'criterion_scores__criterion', 'attachments')
         
         print(f"[DEBUG] CompletedExamsView: Anzahl abgeschlossener Prüfungen: {completed_attempts.count()}")
         
         return completed_attempts
+
+# NEU: View für ALLE Prüfungen
+class AllExamsListView(generics.ListAPIView):
+    """
+    Gibt eine Liste *aller* im System definierten Prüfungen zurück.
+    Wird für den "Übersicht"-Tab im Frontend benötigt.
+    Benötigt Authentifizierung, da die Prüfungstitel etc. nicht öffentlich sein sollen.
+    """
+    serializer_class = ExamSerializer
+    permission_classes = [IsAuthenticated] # Nur für eingeloggte Benutzer
+
+    def get_queryset(self):
+        print(f"[DEBUG] AllExamsListView: Lade ALLE Prüfungen")
+        # Lade alle Prüfungen und die benötigten Relationen für den Serializer
+        queryset = Exam.objects.all().prefetch_related('criteria', 'requirements', 'modules')
+        print(f"[DEBUG] AllExamsListView: {queryset.count()} Prüfungen gefunden")
+        return queryset
 
 # --- Prüfungsaktionen Views ---
 
