@@ -27,6 +27,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 import { ModuleProvider } from "./context/ModuleContext";
 import { ExamProvider } from "./context/ExamContext";
 import ProtectedRoute from "./components/utils/ProtectedRoute.tsx";
+import { Toaster } from "sonner";
 
 // Verschiebe Navigationsdaten und die Hauptlogik in eine separate Komponente,
 // damit `useAuth` verwendet werden kann.
@@ -85,6 +86,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
+      <Toaster position="bottom-right" richColors />
       {/* Header */}
       <HeaderNavigation
         logo={<img src={LogoDSP} alt="Logo" className="h-12" />}

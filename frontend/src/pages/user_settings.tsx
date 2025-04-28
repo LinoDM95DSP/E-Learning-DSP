@@ -10,6 +10,8 @@ import {
   IoSaveOutline,
   IoColorPaletteOutline,
 } from "react-icons/io5";
+import { toast } from "sonner";
+import DspNotification from "../components/toaster/notifications/DspNotification";
 
 type TabState = "profil" | "konto" | "benachrichtigungen" | "design";
 
@@ -17,6 +19,17 @@ function UserSettings() {
   const [activeTab, setActiveTab] = useState<TabState>("profil");
   const [sliderStyle, setSliderStyle] = useState({});
   const tabsRef = useRef<HTMLDivElement>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [errorProfile, setErrorProfile] = useState<string | null>(null);
+  const [successProfile, setSuccessProfile] = useState(false);
+  const [loadingPassword, setLoadingPassword] = useState(false);
+  const [errorPassword, setErrorPassword] = useState<string | null>(null);
+  const [successPassword, setSuccessPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
 
   // --- Breadcrumb Items ---
   const breadcrumbItems = [
@@ -128,7 +141,7 @@ function UserSettings() {
           <ButtonPrimary
             title="Profil speichern"
             icon={<IoSaveOutline />}
-            onClick={() => {}}
+            onClick={handleProfileSubmit}
           />
         </div>
       </div>
@@ -193,7 +206,7 @@ function UserSettings() {
               <ButtonPrimary
                 title="Passwort speichern"
                 icon={<IoSaveOutline />}
-                onClick={() => {}}
+                onClick={handlePasswordSubmit}
               />
             </div>
           </div>
@@ -313,6 +326,119 @@ function UserSettings() {
       </div>
     </section>
   );
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // ... (Validierung etc.)
+    setLoadingProfile(true);
+    setErrorProfile(null);
+
+    try {
+      const success = await updateProfile(profileData);
+      if (success) {
+        // ERFOLG-TOAST
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="success"
+            title="Profil gespeichert"
+            message="Deine Profilinformationen wurden erfolgreich aktualisiert."
+          />
+        ));
+      } else {
+        // FEHLER-TOAST (wenn API false zurückgibt)
+        setErrorProfile("Profil konnte nicht aktualisiert werden.");
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="error"
+            title="Speichern fehlgeschlagen"
+            message="Deine Profilinformationen konnten nicht gespeichert werden."
+          />
+        ));
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Aktualisieren des Profils:", err);
+      const msg =
+        err.response?.data?.detail ||
+        err.message ||
+        "Ein Fehler ist aufgetreten.";
+      setErrorProfile(msg);
+      // FEHLER-TOAST (Exception)
+      toast.custom((t) => (
+        <DspNotification
+          id={t}
+          type="error"
+          title="Speichern fehlgeschlagen"
+          message={`Fehler: ${msg}`}
+        />
+      ));
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // ... (Passwort-Validierung)
+
+    setLoadingPassword(true);
+    setErrorPassword(null);
+    setSuccessPassword(false);
+
+    try {
+      const success = await changePassword(
+        passwordData.current_password,
+        passwordData.new_password
+      );
+      if (success) {
+        setSuccessPassword(true);
+        setPasswordData({
+          current_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
+        // ERFOLG-TOAST
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="success"
+            title="Passwort geändert"
+            message="Dein Passwort wurde erfolgreich aktualisiert."
+          />
+        ));
+      } else {
+        // FEHLER-TOAST (wenn API false zurückgibt)
+        setErrorPassword("Passwort konnte nicht geändert werden.");
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="error"
+            title="Änderung fehlgeschlagen"
+            message="Das Passwort konnte nicht geändert werden. Überprüfe dein aktuelles Passwort."
+          />
+        ));
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Ändern des Passworts:", err);
+      const msg =
+        err.response?.data?.detail ||
+        err.message ||
+        "Ein Fehler ist aufgetreten.";
+      setErrorPassword(msg);
+      // FEHLER-TOAST (Exception)
+      toast.custom((t) => (
+        <DspNotification
+          id={t}
+          type="error"
+          title="Änderung fehlgeschlagen"
+          message={`Fehler: ${msg}`}
+        />
+      ));
+    } finally {
+      setLoadingPassword(false);
+    }
+  };
 
   return (
     <div className="p-6">

@@ -247,18 +247,13 @@ function Modules() {
         Entdecke unsere Lernmodule und filtere nach deinen Interessen.
       </p>
 
-      <div className="mb-8">
+
         <FilterHead
-          title=""
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-        />
-      </div>
-
-      {/* NEU: Kombinierte Zeile für Filter und Ansicht-Umschalter */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        {/* Filter-Container */}
-        <div className="flex flex-wrap gap-x-4 gap-y-2 items-center">
+          searchPlaceholder="Module durchsuchen..."
+          className="mb-8"
+        >
           <ButtonFilterSimple
             label="Status:"
             options={["Nicht begonnen", "In Bearbeitung", "Abgeschlossen"]}
@@ -276,7 +271,7 @@ function Modules() {
             onClearClick={() => setActiveFilters([])}
             activeClassName="bg-dsp-orange text-white border-dsp-orange"
           />
-          {/* NEU: Kategorie-Filter-Button */}
+          <div className="h-5 w-px bg-gray-300 hidden sm:block"></div>
           {allCategories.length > 0 && (
             <ButtonFilterCategory
               allCategories={allCategories}
@@ -285,44 +280,42 @@ function Modules() {
               onClearClick={() => setActiveCategoryFilters([])}
             />
           )}
+        </FilterHead>
+
+        <div className="flex justify-end mb-6">
+          <div className="inline-flex rounded-md shadow-sm bg-white border border-gray-300">
+            <button
+              onClick={() => setViewMode("standard")}
+              className={clsx(
+                "relative inline-flex items-center px-3 py-1.5 rounded-l-md border-r border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange",
+                "cursor-pointer",
+                viewMode === "standard"
+                  ? "bg-dsp-orange text-white"
+                  : "text-gray-500 bg-white hover:bg-dsp-orange_light"
+              )}
+              aria-label="Standardansicht"
+              title="Standardansicht"
+            >
+              <IoGridOutline className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={clsx(
+                "relative inline-flex items-center px-3 py-1.5 rounded-r-md text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange",
+                "cursor-pointer",
+                viewMode === "table"
+                  ? "bg-dsp-orange text-white"
+                  : "text-gray-500 bg-white hover:bg-dsp-orange_light"
+              )}
+              aria-label="Tabellenansicht"
+              title="Tabellenansicht"
+            >
+              <IoListOutline className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Ansicht-Umschalter */}
-        <div className="inline-flex rounded-md shadow-sm bg-white border border-gray-300">
-          <button
-            onClick={() => setViewMode("standard")}
-            className={clsx(
-              "relative inline-flex items-center px-3 py-1.5 rounded-l-md border-r border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange",
-              "cursor-pointer",
-              viewMode === "standard"
-                ? "bg-dsp-orange text-white"
-                : "text-gray-500 bg-white hover:bg-dsp-orange_light"
-            )}
-            aria-label="Standardansicht"
-            title="Standardansicht"
-          >
-            <IoGridOutline className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("table")}
-            className={clsx(
-              "relative inline-flex items-center px-3 py-1.5 rounded-r-md text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-dsp-orange focus:border-dsp-orange",
-              "cursor-pointer",
-              viewMode === "table"
-                ? "bg-dsp-orange text-white"
-                : "text-gray-500 bg-white hover:bg-dsp-orange_light"
-            )}
-            aria-label="Tabellenansicht"
-            title="Tabellenansicht"
-          >
-            <IoListOutline className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Grid/Table Container */}
       <div className="mt-6">
-        {/* Rendere Tabelle oder Grid basierend auf viewMode */}
         {viewMode === "standard" ? (
           <div
             className={clsx(

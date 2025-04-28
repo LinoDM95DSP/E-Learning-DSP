@@ -210,20 +210,22 @@ class SubmitExamView(views.APIView):
 
 class TeacherSubmissionsListView(generics.ListAPIView):
     """
-    Gibt eine Liste aller eingereichten (Status 'submitted') Prüfungsversuche zurück.
+    Gibt eine Liste aller eingereichten UND bewerteten Prüfungsversuche zurück.
     Nur für Lehrer/Admins zugänglich.
     """
     serializer_class = TeacherSubmissionSerializer
-    permission_classes = [IsAdminUser] 
+    permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        submitted_attempts = ExamAttempt.objects.filter(
-            status=ExamAttempt.Status.SUBMITTED
-        ).select_related('exam', 'user').prefetch_related('attachments', 'exam__criteria') # Kriterien mitladen
-        
-        print(f"[DEBUG] TeacherSubmissionsListView: {submitted_attempts.count()} eingereichte Prüfungen gefunden")
-        
-        return submitted_attempts
+        print(f"[DEBUG] TeacherSubmissionsListView: Lade 'submitted' und 'graded' Versuche")
+        # Korrigierter Filter: Schließe beide Status ein
+        queryset = ExamAttempt.objects.filter(
+            status__in=[ExamAttempt.Status.SUBMITTED, ExamAttempt.Status.GRADED]
+        ).select_related('exam', 'user').prefetch_related('attachments', 'exam__criteria')
+
+        print(f"[DEBUG] TeacherSubmissionsListView: {queryset.count()} Einreichungen (submitted/graded) gefunden")
+
+        return queryset
 
 class TeacherGradeAttemptView(views.APIView):
     """

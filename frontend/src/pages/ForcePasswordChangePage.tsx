@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import * as userAdminApi from "../util/apis/userAdminApi";
 import { useAuth } from "../context/AuthContext"; // Import useAuth
+import { toast } from "sonner"; // Importieren
+import DspNotification from "../components/toaster/notifications/DspNotification"; // Importieren
 
 const ForcePasswordChangePage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +47,6 @@ const ForcePasswordChangePage: React.FC = () => {
 
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const result = await userAdminApi.setInitialPassword({
@@ -57,12 +58,30 @@ const ForcePasswordChangePage: React.FC = () => {
         setSuccess(
           result.message + " Sie werden zum Dashboard weitergeleitet..."
         );
-        // Flag im Backend ist jetzt false, der Benutzer kann normal navigieren
+        // ERFOLG-TOAST
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="success"
+            title="Passwort geändert"
+            message="Dein Passwort wurde erfolgreich aktualisiert. Du wirst zum Dashboard weitergeleitet."
+          />
+        ));
+        // Weiterleitung nach kurzer Verzögerung, damit Toast sichtbar ist
         setTimeout(() => {
-          navigate("/dashboard"); // Zum Dashboard weiterleiten
-        }, 2000);
+          navigate("/dashboard");
+        }, 1500);
       } else if (result.error) {
         setError(result.error);
+        // FEHLER-TOAST
+        toast.custom((t) => (
+          <DspNotification
+            id={t}
+            type="error"
+            title="Fehler beim Ändern"
+            message={`${result.error}`}
+          />
+        ));
       }
     } catch (err: unknown) {
       console.error("Fehler beim Setzen des initialen Passworts:", err);
@@ -99,6 +118,15 @@ const ForcePasswordChangePage: React.FC = () => {
         errorMessage = error.message;
       }
       setError(errorMessage);
+      // FEHLER-TOAST
+      toast.custom((t) => (
+        <DspNotification
+          id={t}
+          type="error"
+          title="Fehler beim Ändern"
+          message={`${errorMessage}`}
+        />
+      ));
     } finally {
       setLoading(false);
     }

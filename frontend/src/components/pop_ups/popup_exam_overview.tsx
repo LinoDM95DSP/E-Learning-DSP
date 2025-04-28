@@ -6,7 +6,6 @@ import {
   IoRocketOutline,
 } from "react-icons/io5";
 import {
-  Clock,
   Calendar,
   CalendarClock,
   CheckCircle2,
@@ -246,7 +245,7 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
 
           {/* Rechte Spalte */}
           <div className="md:col-span-2 space-y-6">
-            {/* NEU: Voraussetzungen (an die richtige Stelle verschoben) */}
+            {/* Voraussetzungen (Module) */}
             <section>
               <div className="flex items-center gap-2 mb-3">
                 <BookOpen className="h-5 w-5 text-dsp-orange" />
@@ -254,80 +253,55 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
                   Voraussetzungen
                 </h3>
               </div>
-              <div className="bg-gray-50 p-4 rounded-md text-sm text-gray-700 space-y-2 border border-gray-200">
+              <ul className="bg-gray-50 p-4 rounded-md space-y-2 border border-gray-200">
                 {exam.modules && exam.modules.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-1">
-                    {exam.modules.map((module) => (
-                      <li key={module.id}>{module.title}</li>
-                    ))}
-                  </ul>
+                  exam.modules.map((mod) => (
+                    <li key={mod.id} className="text-sm text-gray-700">
+                      {mod.title}
+                    </li>
+                  ))
                 ) : (
-                  <p className="italic text-gray-500">
-                    Für diese Prüfung sind keine spezifischen Module
-                    vorausgesetzt.
-                  </p>
+                  <li className="text-sm text-gray-500 italic">
+                    Keine Modul-Voraussetzungen.
+                  </li>
                 )}
-              </div>
+              </ul>
             </section>
 
-            {/* Fristen & Zeitplan */}
+            {/* Status-Informationen */}
             <section>
               <div className="flex items-center gap-2 mb-3">
-                <Calendar className="h-5 w-5 text-dsp-orange" />
-                <h3 className="font-semibold text-lg text-gray-800">
-                  Fristen & Zeitplan
-                </h3>
+                <Info className="h-5 w-5 text-dsp-orange" />
+                <h3 className="font-semibold text-lg text-gray-800">Details</h3>
               </div>
-              <div className="bg-gray-50 p-4 rounded-md space-y-3 border border-gray-200">
-                {/* Dauer & Punkte */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="flex flex-col p-3 border rounded-md bg-white shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Clock className="h-4 w-4 text-dsp-orange" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Dauer
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">
-                      {exam.exam_duration_week}{" "}
-                      {exam.exam_duration_week === 1 ? "Woche" : "Wochen"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col p-3 border rounded-md bg-white shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Award className="h-4 w-4 text-dsp-orange" />
-                      <span className="text-xs font-medium text-gray-600">
-                        Punkte
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-800">
-                      {totalMaxPoints}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Statusabhängige Infos */}
-                {status === "available" && (
-                  <div className="text-center text-sm text-gray-500 italic py-2">
-                    Noch nicht gestartet.
-                  </div>
-                )}
+              <div className="bg-gray-50 p-4 rounded-md space-y-2.5 border border-gray-200 text-sm">
+                <InfoLine
+                  icon={<Timer className="h-4 w-4 text-gray-500" />}
+                  label="Bearbeitungszeit"
+                  value={`${exam.exam_duration_week} Woche${
+                    exam.exam_duration_week !== 1 ? "n" : ""
+                  }`}
+                />
                 {attempt && (
                   <>
+                    <hr className="border-gray-200" />
                     <InfoLine
-                      icon={<Calendar className="h-4 w-4 text-dsp-orange" />}
+                      icon={<Calendar className="h-4 w-4 text-gray-500" />}
                       label="Gestartet am"
                       value={formatDate(attempt.started_at)}
                     />
-                    <InfoLine
-                      icon={
-                        <CalendarClock className="h-4 w-4 text-dsp-orange" />
-                      }
-                      label="Fällig am"
-                      value={formatDate(attempt.due_date)}
-                      valueClass="text-red-600 font-medium"
-                    />
-                    {attempt.submitted_at && (
+                    {attempt.status === "started" && (
+                      <InfoLine
+                        icon={
+                          <CalendarClock className="h-4 w-4 text-gray-500" />
+                        }
+                        label="Fällig am"
+                        value={formatDate(attempt.due_date)}
+                        valueClass="text-red-600 font-medium"
+                      />
+                    )}
+                    {(attempt.status === "submitted" ||
+                      attempt.status === "graded") && (
                       <InfoLine
                         icon={
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -336,20 +310,36 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
                         value={formatDate(attempt.submitted_at)}
                       />
                     )}
-                    {attempt.graded_at && (
-                      <InfoLine
-                        icon={<Info className="h-4 w-4 text-blue-600" />}
-                        label="Bewertet am"
-                        value={formatDate(attempt.graded_at)}
-                      />
-                    )}
-                    {status === "started" && (
-                      <InfoLine
-                        icon={<Timer className="h-4 w-4 text-amber-600" />}
-                        label="Verbleibende Zeit"
-                        value={getRemainingTimeText(attempt.remaining_days)}
-                        valueClass="font-medium"
-                      />
+                    {attempt.status === "graded" && (
+                      <>
+                        <InfoLine
+                          icon={<Calendar className="h-4 w-4 text-gray-500" />}
+                          label="Bewertet am"
+                          value={formatDate(attempt.graded_at)}
+                        />
+                        <InfoLine
+                          icon={<Award className="h-4 w-4 text-gray-500" />}
+                          label="Ergebnis"
+                          value={
+                            typeof attempt.score === "number" ||
+                            typeof attempt.score === "string"
+                              ? `${attempt.score} / ${totalMaxPoints} Pkt.`
+                              : "N/A"
+                          }
+                          valueClass="text-dsp-blue font-semibold"
+                        />
+                        {attempt.feedback && (
+                          <div className="pt-1">
+                            <p className="text-xs text-gray-500 mb-1 flex items-center">
+                              <IoChatbubbleEllipsesOutline className="mr-1" />{" "}
+                              Feedback:
+                            </p>
+                            <p className="text-gray-700 whitespace-pre-wrap bg-gray-100 px-2 py-1 rounded text-xs">
+                              {attempt.feedback}
+                            </p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </>
                 )}
@@ -364,73 +354,39 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
                   Bewertungskriterien
                 </h3>
               </div>
-              <div className="bg-gray-50 p-4 rounded-md space-y-2 border border-gray-200">
+              <ul className="bg-gray-50 p-4 rounded-md space-y-2 border border-gray-200 text-sm">
                 {exam.criteria && exam.criteria.length > 0 ? (
                   exam.criteria.map((criterion) => (
-                    <div
+                    <li
                       key={criterion.id}
-                      className="flex justify-between items-center py-1.5 border-b border-gray-200 last:border-b-0"
+                      className="flex justify-between items-start"
                     >
-                      <span className="text-sm text-gray-700">
+                      <span className="text-gray-700 mr-2">
                         {criterion.title}
                       </span>
-                      <span className="text-sm font-medium text-gray-800">
+                      <span className="text-gray-600 font-medium whitespace-nowrap">
                         {criterion.max_points} Pkt.
                       </span>
-                    </div>
+                    </li>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 italic">
+                  <li className="text-sm text-gray-500 italic">
                     Keine Kriterien definiert.
-                  </p>
+                  </li>
                 )}
-                {attempt?.status === "graded" && attempt.criterion_scores && (
-                  <div className="pt-3 mt-3 border-t border-gray-300">
-                    <h4 className="text-sm font-semibold text-gray-600 mb-2">
-                      Erreichte Punkte:
-                    </h4>
-                    {attempt.criterion_scores.map((score) => (
-                      <div
-                        key={score.id}
-                        className="flex justify-between items-center py-1 text-xs"
-                      >
-                        <span className="text-gray-600">
-                          {score.criterion.title}
-                        </span>
-                        <span className="font-medium text-dsp-blue">
-                          {score.achieved_points ?? "N/A"} /{" "}
-                          {score.criterion.max_points}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-2 mt-2 border-t">
-                      <span className="text-sm font-semibold text-gray-800">
-                        Gesamt
-                      </span>
-                      <span className="text-lg font-bold text-dsp-blue">
-                        {attempt.score ?? "N/A"} / {totalMaxPoints}
-                      </span>
-                    </div>
-                  </div>
+                {totalMaxPoints > 0 && (
+                  <li className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-semibold">
+                    <span>Gesamt</span>
+                    <span>{totalMaxPoints} Pkt.</span>
+                  </li>
                 )}
-                {attempt?.status === "graded" && attempt.feedback && (
-                  <div className="pt-3 mt-3 border-t border-gray-300">
-                    <h4 className="text-sm font-semibold text-gray-600 mb-1 flex items-center">
-                      <IoChatbubbleEllipsesOutline className="mr-1.5" />{" "}
-                      Feedback
-                    </h4>
-                    <p className="text-xs text-gray-700 bg-white p-2 border rounded whitespace-pre-wrap">
-                      {attempt.feedback}
-                    </p>
-                  </div>
-                )}
-              </div>
+              </ul>
             </section>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-3 bg-gray-50">
+        <div className="p-5 bg-gray-50 border-t flex flex-col sm:flex-row justify-end gap-3">
           <ButtonSecondary
             title="Schließen"
             onClick={onClose}
@@ -438,16 +394,16 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
           />
           {status === "available" && onStartExam && (
             <ButtonPrimary
-              title="Prüfung starten"
-              icon={<IoRocketOutline />}
+              icon={<IoRocketOutline className="mr-1.5" />}
+              title="Prüfung jetzt starten"
               onClick={handleStartClick}
               classNameButton="w-full sm:w-auto"
             />
           )}
           {status === "started" && onPrepareSubmission && (
             <ButtonPrimary
+              icon={<IoCheckmarkDoneOutline className="mr-1.5" />}
               title="Abgabe vorbereiten"
-              icon={<IoCheckmarkDoneOutline />}
               onClick={handlePrepareSubmissionClick}
               classNameButton="w-full sm:w-auto"
             />
@@ -471,12 +427,12 @@ const InfoLine: React.FC<InfoLineProps> = ({
   value,
   valueClass = "text-gray-800",
 }) => (
-  <div className="flex items-center gap-3 py-1.5 border-b border-gray-200 last:border-b-0 text-sm">
-    <span className="text-gray-500">{icon}</span>
-    <div className="flex-grow">
-      <span className="text-xs text-gray-500 block">{label}</span>
-      <span className={`font-medium ${valueClass}`}>{value ?? "N/A"}</span>
-    </div>
+  <div className="flex items-center justify-between">
+    <span className="flex items-center text-gray-600">
+      {icon}
+      <span className="ml-1.5">{label}</span>
+    </span>
+    <span className={`font-medium ${valueClass}`}>{value ?? "N/A"}</span>
   </div>
 );
 

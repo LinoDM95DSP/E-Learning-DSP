@@ -168,25 +168,27 @@ class CompletedExamAttemptSerializer(BaseExamAttemptSerializer):
 
 class TeacherSubmissionSerializer(BaseExamAttemptSerializer):
     """Serializer für die Lehreransicht der eingereichten Prüfungen."""
-    # Fügt Benutzerdetails hinzu
+    # Fügt Benutzerdetails des Studenten hinzu
     user = UserSerializer(read_only=True)
+    # NEU: Fügt Benutzerdetails des Bewerters hinzu
+    graded_by = UserSerializer(read_only=True)
 
     class Meta(BaseExamAttemptSerializer.Meta):
-         # Felder auswählen, die für die Lehrerbewertung relevant sind
+        # Felder auswählen, die für die Lehrerbewertung relevant sind
         fields = [
             "id",
             "exam",
-            "user", # Benutzerdetails anzeigen
-            "status", # Sollte 'submitted' sein
+            "user", # Student
+            "status",
             "started_at",
             "submitted_at",
-            "attachments", # Wichtig für die Bewertung
-            # Folgende Felder sind noch nicht gesetzt, könnten aber angezeigt werden
+            "attachments",
             "graded_at",
+            "graded_by", # NEU: Feld hinzugefügt
             "score",
             "feedback",
-            "criterion_scores", 
-            "processing_time_days", # Info für Lehrer
+            "criterion_scores",
+            "processing_time_days",
         ]
         read_only_fields = fields
 

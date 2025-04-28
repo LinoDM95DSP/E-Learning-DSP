@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import api from "../util/apis/api";
 import { useAuth } from "./AuthContext";
@@ -42,6 +43,16 @@ export interface Exam {
   updated_at: string;
   modules: Module[];
   criteria: Criterion[];
+  requirements?: ExamRequirement[]; // Hinzugefügt als optional
+}
+
+// Einfacher User-Typ entsprechend UserSerializer
+interface SimpleUser {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
 }
 
 export interface CriterionScore {
@@ -50,23 +61,29 @@ export interface CriterionScore {
   achieved_points: number;
 }
 
+// NEU: ExamAttachment Typ (falls noch nicht global vorhanden)
+export interface ExamAttachment {
+  id: number;
+  file: string;
+  uploaded_at?: string;
+}
+
 export interface ExamAttempt {
   id: number;
   exam: Exam;
-  user: {
-    id: number;
-    username: string;
-  };
+  user: SimpleUser; // Verwende SimpleUser
   status: "started" | "submitted" | "graded";
   started_at: string;
   submitted_at: string | null;
   graded_at: string | null;
-  score: number | null;
+  score: number | string | null; // Kann auch String sein, wie gesehen
   feedback: string | null;
   due_date: string | null;
   remaining_days: number | null;
   processing_time_days: number | null;
   criterion_scores: CriterionScore[];
+  attachments?: ExamAttachment[]; // Optional machen
+  graded_by?: SimpleUser | null; // NEU: Bewerter hinzugefügt (optional)
 }
 
 // Definition des Context-Typs
@@ -379,7 +396,7 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
       console.log(`ExamContext: Bewerte Prüfungsversuch ${attemptId}`);
       // POST-Anfrage zum Bewerten einer Prüfung
       const payload = {
-        criterion_scores: scores,
+        scores: scores,
         feedback,
       };
       console.log("ExamContext: Bewertungsdaten:", payload);
@@ -400,16 +417,17 @@ export const ExamProvider: React.FC<ExamProviderProps> = ({ children }) => {
     }
   };
 
-  // Refresh-Funktionen
-  const refreshUserExams = async () => {
-    console.log("ExamContext: Aktualisiere Benutzerdaten");
+  // Funktionen memoisiert mit useCallback
+  const refreshUserExams = useCallback(async () => {
+    if (!isAuthenticated) return; // Abhängigkeit: isAuthenticated
     await fetchUserExams();
-  };
+    await fetchAllExams();
+  }, [isAuthenticated]); // Abhängigkeit hinzugefügt
 
-  const refreshTeacherData = async () => {
-    console.log("ExamContext: Aktualisiere Lehrer-Daten");
+  const refreshTeacherData = useCallback(async () => {
+    if (!isAuthenticated || !user?.is_staff) return; // Abhängigkeiten: isAuthenticated, user.is_staff
     await fetchTeacherSubmissions();
-  };
+  }, [isAuthenticated, user?.is_staff]); // Abhängigkeiten hinzugefügt
 
   // Effect zum Aktualisieren der State-Daten
   useEffect(() => {
