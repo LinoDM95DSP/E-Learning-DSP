@@ -375,3 +375,52 @@ class CriterionScore(models.Model):
         """Ruft full_clean zur Validierung vor dem Speichern auf."""
         self.full_clean() 
         super().save(*args, **kwargs)
+
+
+# --- Neues Modell für Zertifikatspfade ---
+
+class CertificationPath(models.Model):
+    """
+    Repräsentiert einen logischen Lernpfad, der aus mehreren Abschlussprüfungen (Exams)
+    bestehen kann.
+    """
+    title = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text=_("Titel des Zertifikatspfads (z.B. Backend Developer Profi)")
+    )
+    description = models.TextField(
+        blank=True,
+        help_text=_("Kurze Beschreibung, was dieser Pfad abdeckt.")
+    )
+    # ManyToMany zu Exam, um die Prüfungen im Pfad zu definieren
+    exams = models.ManyToManyField(
+        Exam,
+        related_name="certification_paths",
+        blank=True, # Ein Pfad könnte initial leer sein
+        help_text=_("Die Abschlussprüfungen, die Teil dieses Pfades sind.")
+    )
+    # Optional: Feld für die Sortierreihenfolge der Pfade in Listen
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        db_index=True,
+        help_text=_("Reihenfolge für die Anzeige (kleinere Zahlen zuerst).")
+    )
+    # Optional: Feld für ein Icon (z.B. Name einer Icon-Komponente im Frontend)
+    icon_name = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_("Name des Icons für das Frontend (z.B. IoCodeSlashOutline).")
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Certification Path")
+        verbose_name_plural = _("Certification Paths")
+        ordering = ["order", "title"] # Standard-Sortierung
+
+    def __str__(self):
+        return self.title

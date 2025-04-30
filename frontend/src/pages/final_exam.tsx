@@ -4,7 +4,6 @@ import ButtonPrimary from "../components/ui_elements/buttons/button_primary";
 import ButtonSecondary from "../components/ui_elements/buttons/button_secondary";
 import {
   IoTimeOutline,
-  IoStarOutline,
   IoCalendarOutline,
   IoFlagOutline,
   IoCheckmarkDoneOutline,
@@ -29,6 +28,14 @@ type UserExamStatus =
   | "started"
   | "submitted"
   | "graded";
+
+// NEU: Mapping für Tab-Beschriftungen
+const tabLabels: Record<TabState, string> = {
+  übersicht: "Übersicht",
+  verfügbar: "Verfügbar",
+  inBearbeitung: "In Bearbeitung", // Korrekte Beschriftung
+  abgeschlossen: "Abgeschlossen",
+};
 
 // Hilfsfunktion zur Formatierung des Datums
 const formatDate = (dateString: string | null): string => {
@@ -156,7 +163,7 @@ function FinalExam() {
     }
   }, [activeTab]);
 
-  // Tab-Rendering-Funktion
+  // Tab-Rendering-Funktion - jetzt mit Label-Mapping
   const renderTabs = () => (
     <div
       ref={tabsRef}
@@ -166,14 +173,7 @@ function FinalExam() {
         className="absolute inset-y-0 bg-dsp-orange rounded-md shadow-sm transition-all duration-300 ease-out pointer-events-none"
         style={sliderStyle}
       />
-      {(
-        [
-          "übersicht",
-          "verfügbar",
-          "inBearbeitung",
-          "abgeschlossen",
-        ] as TabState[]
-      ).map((tab) => (
+      {(Object.keys(tabLabels) as TabState[]).map((tab) => (
         <button
           key={tab}
           data-tab={tab}
@@ -185,8 +185,7 @@ function FinalExam() {
                 : "text-gray-600 hover:text-gray-800"
             }`}
         >
-          {tab.charAt(0).toUpperCase() +
-            tab.slice(1).replace("inBearbeitung", "In Bearbeitung")}
+          {tabLabels[tab]} {/* Verwende das Label aus dem Mapping */}
         </button>
       ))}
     </div>
@@ -487,8 +486,6 @@ function FinalExam() {
                 <div className="flex items-center text-xs text-gray-500 mb-1">
                   <IoTimeOutline className="mr-1.5" /> {exam.exam_duration_week}{" "}
                   {exam.exam_duration_week === 1 ? "Woche" : "Wochen"}
-                  <IoStarOutline className="ml-3 mr-1.5" />
-                  {maxScore ?? "?"} Pkt.
                 </div>
 
                 {attempt && (
@@ -640,11 +637,11 @@ function FinalExam() {
           return (
             <div
               key={exam.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200 flex flex-col"
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-200 flex flex-col"
             >
-              <div className="p-6 flex-grow">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800 leading-tight mr-2">
+              <div className="p-5 flex-grow">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-base font-semibold text-gray-800 leading-tight mr-2">
                     {exam.exam_title || "Titel nicht verfügbar"}
                   </h3>
                   <div className="flex-shrink-0 mt-px">
@@ -654,20 +651,22 @@ function FinalExam() {
                     />
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-4 flex-grow">
-                  {truncateText(exam.exam_description)}
+                <p className="text-xs text-gray-500 mb-3 h-10 overflow-hidden">
+                  {truncateText(exam.exam_description, 80)}
                 </p>
-                <div className="flex items-center text-sm text-gray-500 mb-2">
-                  <IoTimeOutline className="mr-2" /> {exam.exam_duration_week}{" "}
+                <div className="flex items-center text-xs text-gray-500 mb-1">
+                  <IoTimeOutline className="mr-1.5" /> {exam.exam_duration_week}{" "}
                   {exam.exam_duration_week === 1 ? "Woche" : "Wochen"}
                 </div>
               </div>
-              <div className="bg-gray-50 p-4 border-t border-gray-200">
-                <ButtonPrimary
-                  title="Details anzeigen"
-                  onClick={() => handleOpenPopup(exam)}
-                  classNameButton="w-full text-sm"
-                />
+              <div className="bg-gray-50 p-3 border-t border-gray-200">
+                <div className="flex justify-end w-full">
+                  <ButtonPrimary
+                    title="Details anzeigen"
+                    onClick={() => handleOpenPopup(exam)}
+                    classNameButton="w-full sm:w-auto text-sm"
+                  />
+                </div>
               </div>
             </div>
           );

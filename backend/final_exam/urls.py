@@ -1,27 +1,47 @@
-from django.urls import path
-from . import views
+from django.urls import path, include
+# Router import nicht mehr nötig, wenn nicht anderweitig verwendet
+# from rest_framework.routers import DefaultRouter
+from .views import (
+    AvailableExamsView,
+    ActiveExamsView,
+    CompletedExamsView,
+    AllExamsListView,
+    StartExamView,
+    SubmitExamView,
+    TeacherSubmissionsListView,
+    TeacherGradeAttemptView,
+    CertificationPathViewSet,
+)
 
-# Behalte ggf. die allgemeine ExamListView bei, wenn benötigt
-# from .views import ExamListView 
+# Router wird nicht mehr benötigt für diesen Zweck
+# router = DefaultRouter()
+# router.register(r'certification-paths', CertificationPathViewSet, basename='certification-path') # Entfernt
 
 urlpatterns = [
-    # --- User facing URLs (Präfix: /api/exams/) ---
-    # path('', ExamListView.as_view(), name='exam-list'), # GET /api/exams/ (Öffentliche Liste aller Prüfungen, optional)
-    path('my-exams/available/', views.AvailableExamsView.as_view(), name='user-available-exams'), # GET /api/exams/my-exams/available/: Zeigt dem eingeloggten Benutzer alle Prüfungen an, die er starten kann.
-    path('my-exams/active/', views.ActiveExamsView.as_view(), name='user-active-exams'),       # GET /api/exams/my-exams/active/: Zeigt dem eingeloggten Benutzer alle Prüfungen an, die er gerade bearbeitet (Status 'started').
-    path('my-exams/completed/', views.CompletedExamsView.as_view(), name='user-completed-exams'), # GET /api/exams/my-exams/completed/: Zeigt dem eingeloggten Benutzer alle Prüfungen an, die er abgegeben oder die bewertet wurden.
-    
-    # NEU: URL für die Liste aller Prüfungen
-    path("all/", views.AllExamsListView.as_view(), name="all-exams"),
-    
-    # --- Prüfungsaktionen ---
-    path('<int:exam_id>/start/', views.StartExamView.as_view(), name='start-exam'), # POST /api/exams/<exam_id>/start/: Startet eine neue Prüfung für den eingeloggten Benutzer.
-    path('attempts/<int:attempt_id>/submit/', views.SubmitExamView.as_view(), name='submit-exam'), # POST /api/exams/attempts/<attempt_id>/submit/: Sendet eine Prüfung zur Bewertung ein.
+    # API-Endpunkte, die keine ViewSets sind (ListAPIView, APIView)
+    path('my-exams/available/', AvailableExamsView.as_view(), name='my-available-exams'),
+    path('my-exams/active/', ActiveExamsView.as_view(), name='my-active-exams'),
+    path('my-exams/completed/', CompletedExamsView.as_view(), name='my-completed-exams'),
+    path('all/', AllExamsListView.as_view(), name='all-exams-list'), # Endpunkt für alle Prüfungen
+    path('<int:exam_id>/start/', StartExamView.as_view(), name='start-exam'),
+    path('attempts/<int:attempt_id>/submit/', SubmitExamView.as_view(), name='submit-exam'),
+    path('teacher/submissions/', TeacherSubmissionsListView.as_view(), name='teacher-submissions'),
+    path('teacher/submissions/<int:attempt_id>/grade/', TeacherGradeAttemptView.as_view(), name='teacher-grade-attempt'),
 
-    # --- Teacher facing URLs (Präfix: /api/exams/) ---
-    path('teacher/submissions/', views.TeacherSubmissionsListView.as_view(), name='teacher-submissions-list'), # GET /api/exams/teacher/submissions/: Zeigt Lehrern/Admins alle abgegebenen (Status 'submitted') Prüfungsversuche an.
-    path('teacher/submissions/<int:attempt_id>/grade/', views.TeacherGradeAttemptView.as_view(), name='teacher-grade-attempt'), # POST /api/exams/teacher/submissions/<attempt_id>/grade/: Ermöglicht Lehrern/Admins das Bewerten eines spezifischen abgegebenen Versuchs.
-    
-    # --- Alte URLs (ersetzt) ---
-    # path('my-exams/', views.UserExamListView.as_view(), name='user-exam-list'), # Ersetzt
+    # --- NEU: Standard path() für Certification Paths ---
+    # Verwendet .as_view({'get': 'list'}), um die GET-Anfrage auf die list-Methode des ViewSets zu mappen
+    path(
+        'certification-paths/',
+        CertificationPathViewSet.as_view({'get': 'list'}),
+        name='certification-path-list'
+    ),
+    # Optional: Wenn du auch eine Detailansicht bräuchtest (haben wir im Frontend aktuell nicht):
+    # path(
+    #     'certification-paths/<int:pk>/',
+    #     CertificationPathViewSet.as_view({'get': 'retrieve'}),
+    #     name='certification-path-detail'
+    # ),
+
+    # URLs, die vom Router generiert wurden, entfernt
+    # path('', include(router.urls)), # Entfernt
 ]

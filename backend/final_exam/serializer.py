@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Exam, ExamAttempt, ExamCriterion, CriterionScore, ExamAttachment, ExamRequirement
+from .models import Exam, ExamAttempt, ExamCriterion, CriterionScore, ExamAttachment, ExamRequirement, CertificationPath
 from django.db.models import Q, Sum
 from django.contrib.auth import get_user_model # User importieren
 
@@ -89,6 +89,45 @@ class ExamSerializer(serializers.ModelSerializer):
         """Berechnet die Summe der max_points aller Kriterien dieser Prüfung."""
         # Aggregiert direkt über die RelatedManager
         return obj.criteria.aggregate(total=Sum('max_points'))['total'] or 0
+
+# --- NEU: Vereinfachter Exam Serializer für Pfade ---
+
+class SimpleExamSerializer(serializers.ModelSerializer):
+    """Zeigt nur grundlegende Infos einer Prüfung an, für die Verwendung in Listen."""
+    exam_title = serializers.CharField(source="title")
+    exam_difficulty = serializers.CharField(source="difficulty")
+
+    class Meta:
+        model = Exam
+        fields = [
+            "id", 
+            "exam_title",
+            "exam_difficulty",
+        ]
+        read_only_fields = fields
+
+
+# --- NEU: Certification Path Serializer ---
+
+class CertificationPathSerializer(serializers.ModelSerializer):
+    """Serializer für Zertifikatspfade, inklusive der zugehörigen Prüfungen."""
+    # Verschachtelter Serializer für die Prüfungen
+    exams = SimpleExamSerializer(many=True, read_only=True)
+    # Optional: icon_name direkt verwenden oder ggf. umbenennen
+    icon = serializers.CharField(source="icon_name", read_only=True)
+
+    class Meta:
+        model = CertificationPath
+        fields = [
+            "id",
+            "title",
+            "description",
+            "icon", # Renamed from icon_name for potential frontend consistency
+            "order",
+            "exams", # Liste der Prüfungen
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"] # Annahme: Pfade werden im Admin erstellt/bearbeitet
+
 
 # --- Serializers for User Views --- 
 

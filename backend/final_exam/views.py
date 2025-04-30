@@ -1,16 +1,17 @@
 from django.shortcuts import render, get_object_or_404
-from rest_framework import generics, views, status
+from rest_framework import generics, views, status, viewsets, permissions
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
-from .models import Exam, ExamAttempt, CriterionScore, ExamCriterion
+from .models import Exam, ExamAttempt, CriterionScore, ExamCriterion, ExamAttachment, ExamRequirement, CertificationPath
 from .serializer import (
     ExamSerializer,
     ActiveExamAttemptSerializer,
     CompletedExamAttemptSerializer,
     TeacherSubmissionSerializer,
-    TeacherGradingSerializer
+    TeacherGradingSerializer,
+    CertificationPathSerializer
 )
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Prefetch
 from django.utils import timezone
 
 # Create your views here.
@@ -286,6 +287,20 @@ class TeacherGradeAttemptView(views.APIView):
         else:
             print(f"[DEBUG] TeacherGradeAttemptView: Fehlerhafte Daten: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# --- NEU: ViewSet für Certification Paths ---
+
+class CertificationPathViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API-Endpunkt, der Zertifikatspfade anzeigt.
+    """
+    queryset = CertificationPath.objects.prefetch_related(
+        # Prüfungen innerhalb des Pfades vorladen und optional sortieren
+        Prefetch('exams', queryset=Exam.objects.order_by('title')) 
+    ).order_by('order', 'title') # Standard-Sortierung für die Pfade selbst
+    serializer_class = CertificationPathSerializer
+    permission_classes = [permissions.IsAuthenticated] # Nur für eingeloggte Benutzer? Anpassen nach Bedarf
+
 
 # --- Alte Views (werden nicht mehr benötigt) --- 
 

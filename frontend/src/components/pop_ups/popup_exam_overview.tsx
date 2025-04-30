@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import clsx from "clsx";
 import {
   IoChatbubbleEllipsesOutline,
   IoCheckmarkDoneOutline,
@@ -24,6 +26,7 @@ import {
   Criterion,
   ExamRequirement,
 } from "../../context/ExamContext"; // Pfad anpassen, falls nötig, ExamRequirement importieren
+import { useModules } from "../../context/ModuleContext"; // Import useModules
 import ButtonPrimary from "../ui_elements/buttons/button_primary";
 import ButtonSecondary from "../ui_elements/buttons/button_secondary";
 
@@ -38,24 +41,6 @@ const formatDate = (dateString: string | null | undefined): string => {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-};
-
-const getRemainingTimeText = (
-  remainingDays: number | null | undefined
-): string => {
-  if (remainingDays === null || remainingDays === undefined) return "N/A";
-  if (remainingDays <= 0) return "Fällig";
-
-  const days = Math.floor(remainingDays);
-  const hours = Math.round((remainingDays - days) * 24);
-
-  if (days === 0) {
-    return `${hours} Stunden`;
-  } else if (hours === 0) {
-    return `${days} ${days === 1 ? "Tag" : "Tage"}`;
-  } else {
-    return `${days} ${days === 1 ? "Tag" : "Tage"}, ${hours} Stunden`;
-  }
 };
 
 const getDifficultyLabel = (difficulty: string | undefined): string => {
@@ -107,6 +92,7 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
   onStartExam,
   onPrepareSubmission,
 }) => {
+  const { modules: userModules } = useModules(); // ModuleContext für User-Module nutzen
   const totalMaxPoints = getTotalMaxPoints(exam.criteria);
   const status = attempt ? attempt.status : "available";
 
@@ -255,11 +241,41 @@ const PopupExamOverview: React.FC<PopupExamOverviewProps> = ({
               </div>
               <ul className="bg-gray-50 p-4 rounded-md space-y-2 border border-gray-200">
                 {exam.modules && exam.modules.length > 0 ? (
-                  exam.modules.map((mod) => (
-                    <li key={mod.id} className="text-sm text-gray-700">
-                      {mod.title}
-                    </li>
-                  ))
+                  exam.modules.map((mod) => {
+                    // Finde das passende Modul im User-Context
+                    const userModuleData = userModules.find(
+                      (um) => um.id === mod.id
+                    );
+                    let isModuleCompleted = false;
+                    if (userModuleData) {
+                      const tasks = userModuleData.tasks || [];
+                      if (tasks.length === 0) {
+                        // Module ohne Tasks gelten hier als abgeschlossen
+                        isModuleCompleted = true;
+                      } else {
+                        // Prüfe, ob ALLE Tasks im Modul abgeschlossen sind
+                        isModuleCompleted = tasks.every(
+                          (task) => task.completed
+                        );
+                      }
+                    }
+
+                    return (
+                      <li key={mod.id} className="text-sm">
+                        <Link
+                          to={`/modules/${mod.id}`}
+                          onClick={onClose}
+                          // KORREKTUR: Klassen für dsp-orange und line-through (konditional)
+                          className={clsx(
+                            "text-dsp-orange hover:text-dsp-orange hover:underline",
+                            isModuleCompleted && "line-through" // Durchstreichen wenn abgeschlossen
+                          )}
+                        >
+                          {mod.title}
+                        </Link>
+                      </li>
+                    );
+                  })
                 ) : (
                   <li className="text-sm text-gray-500 italic">
                     Keine Modul-Voraussetzungen.

@@ -13,6 +13,7 @@ import LoginPopup from "./pages/login";
 import SubscriptionsPage from "./pages/subscriptions";
 import AdminPanel from "./pages/admin_panel";
 import ForcePasswordChangePage from "./pages/ForcePasswordChangePage";
+import CertificationPaths from "./pages/certification_paths";
 // Utils
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Components
@@ -62,6 +63,7 @@ const AppContent: React.FC = () => {
     ...(user !== null
       ? [
           { title: "Dashboard", to: "/dashboard" },
+          { title: "Zertifikatspfade", to: "/certification-paths" },
           { title: "Module & Lerninhalte", to: "/modules" },
           { title: "Abschlussprüfungen", to: "/final-exam" },
           { title: "Deine Statistik", to: "/user-stats" },
@@ -118,6 +120,10 @@ const AppContent: React.FC = () => {
                 element={<TaskDetails />}
               />
               <Route path="/final-exam" element={<FinalExam />} />
+              <Route
+                path="/certification-paths"
+                element={<CertificationPaths />}
+              />
               <Route path="/user-stats" element={<Statistics />} />
               <Route path="/settings" element={<UserSettings />} />
 

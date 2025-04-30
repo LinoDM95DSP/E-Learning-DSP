@@ -6,15 +6,16 @@ from datetime import timedelta # timedelta hinzufügen
 from django.utils import timezone # timezone hinzufügen
 from decimal import Decimal, ROUND_HALF_UP # Import Decimal
 # Corrected import path assuming models.py is in the parent 'modules' directory
-from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress # UserTaskProgress importieren
+from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress
 from django.contrib.auth.models import User # Import User model
 # Import von Exam-Modellen
 try:
-    from final_exam.models import Exam, ExamCriterion, ExamRequirement, ExamAttempt, CriterionScore, ExamDifficulty # ExamDifficulty hinzugefügt
+    from final_exam.models import Exam, ExamCriterion, ExamRequirement, ExamAttempt, CriterionScore, ExamDifficulty, CertificationPath # ExamDifficulty hinzugefügt
     EXAMS_AVAILABLE = True
 except ImportError:
     EXAMS_AVAILABLE = False
-    logging.warning("Die App 'final_exam' wurde nicht gefunden. Prüfungen werden nicht erstellt.")
+    CertificationPath = None # Sicherstellen, dass CertificationPath None ist bei Fehler
+    logging.warning("Die App 'final_exam' wurde nicht gefunden oder Modelle fehlen. Prüfungen und Zertifikatspfade werden nicht erstellt/verarbeitet.")
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -413,6 +414,27 @@ class Command(BaseCommand):
             self.stdout.write('Erstelle spezifische Exam Attempts...')
             created_attempts_exams = set() # Track exams used for attempts
 
+            # Helper function to mark prerequisites as completed
+            def mark_prerequisites_complete(exam_obj, user_obj):
+                completed_tasks_in_prereqs = 0
+                required_modules = exam_obj.modules.all()
+                if required_modules:
+                    # self.stdout.write(f'    - Stelle sicher, dass Voraussetzungen für "{exam_obj.title}" erfüllt sind...')
+                    for module in required_modules:
+                        for task in module.tasks.all():
+                            _, created = UserTaskProgress.objects.update_or_create(
+                                user=user_obj,
+                                task=task,
+                                defaults={'completed': True, 'completed_at': timezone.now()}
+                            )
+                            if created:
+                                completed_tasks_in_prereqs += 1
+                    if completed_tasks_in_prereqs > 0:
+                         self.stdout.write(f'    - {completed_tasks_in_prereqs} Aufgaben in Voraussetzungen für "{exam_obj.title}" als abgeschlossen markiert.')
+                # else:
+                    # self.stdout.write(f'    - Prüfung "{exam_obj.title}" hat keine Modul-Voraussetzungen.')
+
+
             # 1. Graded Attempt
             exam_for_graded = None
             possible_graded_exams = [e for e in exam_list if e not in exams_to_make_available]
@@ -425,6 +447,10 @@ class Command(BaseCommand):
 
                  if criteria_for_graded: # If Block 2
                      try: # Try Block
+                         # --- NEU: Voraussetzungen erfüllen ---
+                         mark_prerequisites_complete(exam_for_graded, test_user)
+                         # ------------------------------------
+
                          # Schritt 1: Attempt holen oder erstellen
                          graded_attempt, created = ExamAttempt.objects.get_or_create(
                              exam=exam_for_graded,
@@ -489,6 +515,10 @@ class Command(BaseCommand):
             if possible_submitted_exams: # If Block 3
                  exam_for_submitted = random.choice(possible_submitted_exams)
                  try: # Try Block 2
+                     # --- NEU: Voraussetzungen erfüllen ---
+                     mark_prerequisites_complete(exam_for_submitted, test_user)
+                     # ------------------------------------
+
                      # Holen oder erstellen
                      submitted_attempt, created = ExamAttempt.objects.get_or_create(
                          exam=exam_for_submitted,
@@ -545,8 +575,95 @@ class Command(BaseCommand):
             
             # Verify available exams count implicitly via view logic later
             
+            # --- NEU: Create Certification Paths ---
+            if CertificationPath and exam_list: # Nur ausführen, wenn Modell und Prüfungen existieren
+                self.stdout.write('Erstelle Zertifikatspfade...')
+
+                # Definition der Pfade: Titel, Beschreibung, Icon, Schlüsselwörter für Prüfungen
+                PATH_DEFINITIONS = [
+                    {
+                        "title": "Frontend Grundlagen",
+                        "description": "Der Einstieg in die moderne Frontend-Entwicklung.",
+                        "icon": "IoCodeSlashOutline", # Beispiel Icon Name
+                        "keywords": ["html", "css", "javascript basics", "react grundlagen", "ui/ux", "layout", "interaktives dashboard"] # Keywords erweitert
+                    },
+                    {
+                        "title": "Python Backend Entwicklung",
+                        "description": "Von den Python-Grundlagen zur serverseitigen Entwicklung mit Django.",
+                        "icon": "IoServerOutline",
+                        "keywords": ["python", "django", "api", "backend", "datenbank", "orm", "webshop", "rest api", "refactoring"] # Keywords erweitert
+                    },
+                    {
+                        "title": "Full-Stack Web Developer",
+                        "description": "Umfassender Pfad für die Entwicklung kompletter Webanwendungen.",
+                        "icon": "IoLayersOutline",
+                        # Umfassendere Keywords
+                        "keywords": ["html", "css", "javascript", "react", "next.js", "python", "django", "api", "datenbank", "full-stack", "blog-anwendung"] # Keywords erweitert
+                    },
+                    {
+                         "title": "Datenanalyse mit Python",
+                         "description": "Einführung in die Werkzeuge und Techniken der Datenanalyse.",
+                         "icon": "IoAnalyticsOutline", # Beispiel, Icon muss im Frontend existieren
+                         "keywords": ["datenanalyse", "pandas", "numpy", "matplotlib", "seaborn", "statistik", "pipeline"] # Keywords erweitert
+                    },
+                    {
+                         "title": "DevOps Essentials",
+                         "description": "Grundlagen für moderne Softwareentwicklungsprozesse.",
+                         "icon": "IoGitBranchOutline", # Beispiel
+                         "keywords": ["git", "docker", "linux", "testing", "deployment", "automation", "testsuite", "cloud"] # Keywords erweitert
+                    },
+                    # Beispiel für einen sehr spezifischen/umfassenden Pfad am Ende
+                    {
+                         "title": "Python Profi Komplettpaket",
+                         "description": "Alle wichtigen Python-Module und Backend-Technologien.",
+                         "icon": "IoSchoolOutline", # Beispiel
+                         "keywords": ["python", "django", "flask", "api", "test", "oop", "datenbank", "docker", "backend", "rest api"], # Keywords erweitert
+                         "order": 99 # Hohe Order, um am Ende zu erscheinen
+                    },
+                ]
+
+                created_paths_count = 0
+                for index, path_def in enumerate(PATH_DEFINITIONS):
+                    # Filtere Prüfungen basierend auf Keywords im Titel (case-insensitive)
+                    path_exams = []
+                    for exam in exam_list:
+                        # Prüfe, ob *mindestens ein* Keyword im Titel vorkommt
+                        if any(keyword in exam.title.lower() for keyword in path_def["keywords"]):
+                            path_exams.append(exam)
+
+                    if not path_exams:
+                         self.stdout.write(self.style.WARNING(f'  - Keine passenden Prüfungen für Pfad "{path_def["title"]}" gefunden (Keywords: {path_def["keywords"]}). Überspringe.'))
+                         continue
+
+                    # Erstelle oder aktualisiere den Pfad
+                    path_obj, created = CertificationPath.objects.get_or_create(
+                        title=path_def["title"],
+                        defaults={
+                            "description": path_def["description"],
+                            "icon_name": path_def.get("icon"),
+                            "order": path_def.get("order", index * 10) # Default order based on list index
+                        }
+                    )
+
+                    # Prüfungen zuweisen (alte löschen, neue hinzufügen)
+                    path_obj.exams.set(path_exams) # set() ist effizient
+
+                    status_msg = "erstellt" if created else "aktualisiert"
+                    self.stdout.write(self.style.SUCCESS(f'  - Zertifikatspfad "{path_obj.title}" {status_msg} mit {len(path_exams)} Prüfung(en).'))
+                    created_paths_count += 1
+
+                self.stdout.write(self.style.SUCCESS(f'{created_paths_count} Zertifikatspfade erstellt/aktualisiert.'))
+
+            else:
+                 if not CertificationPath:
+                     self.stdout.write(self.style.WARNING("CertificationPath Modell nicht verfügbar. Überspringe Pfaderstellung."))
+                 if not exam_list:
+                      self.stdout.write(self.style.WARNING("Keine Prüfungen zum Zuordnen vorhanden. Überspringe Pfaderstellung."))
+                 # Kein else notwendig, da beide oben geprüft werden
+
         else:
-            self.stdout.write(self.style.WARNING('Überspringe Prüfungserstellung und Attempt-Generierung, da App nicht verfügbar.'))
+            # Diese Meldung bleibt relevant, da ohne Exams auch keine Paths erstellt werden
+            self.stdout.write(self.style.WARNING('Überspringe Prüfungserstellung, Attempt- und Pfad-Generierung, da App nicht verfügbar.'))
 
         # Abschließende Erfolgsmeldung
         self.stdout.write(self.style.SUCCESS('Database seeding completed successfully.')) 
